@@ -9,6 +9,7 @@
 
     <!-- Калькулятор -->
     <string name="calc_volume_label">Объём сиропа: %1$d л</string>
+    <string name="calc_liters_button">%1$d л</string>
     <string name="calc_concentration_label">Концентрация</string>
     <string name="calc_ratio_note">Пропорция: сахар : вода, по весу</string>
     <string name="calc_sugar_result">Сахар: %1$s кг</string>
@@ -16,9 +17,22 @@
     <string name="calc_approximate_note">Расчёт приблизительный</string>
 
     <!-- Календарь -->
+    <string name="calendar_region_note">Сроки работ — для средней полосы России. Всё можно изменить под свой регион: нажмите на работу, затем «Изменить».</string>
     <string name="calendar_current_month">%1$s — сейчас</string>
     <string name="calendar_important">Важно</string>
-    <string name="calendar_tap_for_details">Подробнее…</string>
+    <string name="calendar_add_task">+ Добавить работу</string>
+    <string name="calendar_edit_task">Изменить</string>
+    <!-- Редактор работы -->
+    <string name="editor_title_new">Новая работа</string>
+    <string name="editor_title_edit">Изменить работу</string>
+    <string name="editor_task_title">Название</string>
+    <string name="editor_short_description">Короткое описание</string>
+    <string name="editor_full_description">Полное описание (необязательно)</string>
+    <string name="editor_category">Категория</string>
+    <string name="editor_save">Сохранить</string>
+    <string name="editor_cancel">Отмена</string>
+    <string name="editor_delete">Удалить</string>
+    <string name="editor_delete_confirm">Точно удалить?</string>
     <string name="category_inspection">Осмотр</string>
     <string name="category_feeding">Кормление</string>
     <string name="category_treatment">Лечение</string>

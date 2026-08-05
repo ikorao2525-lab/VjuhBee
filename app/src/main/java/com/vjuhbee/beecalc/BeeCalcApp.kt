@@ -1,0 +1,19 @@
+package com.vjuhbee.beecalc
+
+import android.app.Application
+import com.vjuhbee.beecalc.data.CalendarRepository
+import com.vjuhbee.beecalc.data.RoomCalendarRepository
+import com.vjuhbee.beecalc.data.db.BeeCalcDatabase
+
+/**
+ * Application-класс: держит единственные экземпляры базы и репозиториев.
+ * Простая замена DI-фреймворку — без магии (SPEC.md §11).
+ */
+class BeeCalcApp : Application() {
+
+    val database: BeeCalcDatabase by lazy { BeeCalcDatabase.build(this) }
+
+    val calendarRepository: CalendarRepository by lazy {
+        RoomCalendarRepository(database.calendarTaskDao())
+    }
+}

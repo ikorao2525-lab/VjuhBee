@@ -59,14 +59,17 @@ fun CalculatorScreen(viewModel: CalculatorViewModel = viewModel()) {
         )
 
         // Быстрые кнопки дополняют слайдер: нажатие ставит его значение.
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            viewModel.quickVolumes.forEach { liters ->
-                VolumeButton(
-                    liters = liters,
-                    selected = liters == state.volumeLiters,
-                    onClick = { viewModel.setVolume(liters) },
-                    modifier = Modifier.weight(1f)
-                )
+        // По две кнопки в ряду (последняя — во всю ширину): крупнее, удобнее в перчатках.
+        viewModel.quickVolumes.chunked(2).forEach { rowVolumes ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                rowVolumes.forEach { liters ->
+                    VolumeButton(
+                        liters = liters,
+                        selected = liters == state.volumeLiters,
+                        onClick = { viewModel.setVolume(liters) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
 
@@ -106,12 +109,12 @@ private fun VolumeButton(
     modifier: Modifier = Modifier
 ) {
     if (selected) {
-        Button(onClick = onClick, modifier = modifier.heightIn(min = 48.dp)) {
-            Text(text = liters.toString(), style = MaterialTheme.typography.titleMedium)
+        Button(onClick = onClick, modifier = modifier.heightIn(min = 56.dp)) {
+            Text(text = stringResource(R.string.calc_liters_button, liters), style = MaterialTheme.typography.titleLarge)
         }
     } else {
-        OutlinedButton(onClick = onClick, modifier = modifier.heightIn(min = 48.dp)) {
-            Text(text = liters.toString(), style = MaterialTheme.typography.titleMedium)
+        OutlinedButton(onClick = onClick, modifier = modifier.heightIn(min = 56.dp)) {
+            Text(text = stringResource(R.string.calc_liters_button, liters), style = MaterialTheme.typography.titleLarge)
         }
     }
 }

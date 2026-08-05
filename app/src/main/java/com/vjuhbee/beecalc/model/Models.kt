@@ -38,14 +38,15 @@ enum class Importance {
 
 /** Работа в сезонном календаре (SPEC.md §5.2). */
 data class CalendarTask(
-    val id: Int,
+    val id: Int,                         // 0 = новая, id выдаст база
     val month: Int,                      // 1..12
     val title: String,
     val shortDescription: String,
     val fullDescription: String? = null,
     val category: TaskCategory,
     val importance: Importance = Importance.NORMAL,
-    val tags: List<String> = emptyList()
+    val tags: List<String> = emptyList(),
+    val isDone: Boolean = false
 )
 
 /** Статус премиума (SPEC.md §4): модель заложена, UI в v0.1 нет. */
