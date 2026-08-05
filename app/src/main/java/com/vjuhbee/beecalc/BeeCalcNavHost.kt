@@ -16,12 +16,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.vjuhbee.beecalc.ui.calculator.CalculatorScreen
 import com.vjuhbee.beecalc.ui.calendar.CalendarScreen
+import com.vjuhbee.beecalc.ui.hives.HiveDetailScreen
 import com.vjuhbee.beecalc.ui.hives.HivesScreen
 
 /** Три вкладки нижней навигации (SPEC.md §5). */
@@ -47,8 +50,11 @@ fun BeeCalcNavHost() {
         bottomBar = {
             NavigationBar {
                 tabs.forEach { tab ->
+                    // Экран улья (hive/{id}) относится к вкладке «Ульи».
+                    val selected = currentRoute == tab.route ||
+                        (tab.route == "hives" && currentRoute?.startsWith("hive/") == true)
                     NavigationBarItem(
-                        selected = currentRoute == tab.route,
+                        selected = selected,
                         onClick = {
                             navController.navigate(tab.route) {
                                 // Одна копия каждой вкладки в стеке, состояние сохраняется.
@@ -76,7 +82,15 @@ fun BeeCalcNavHost() {
         ) {
             composable("calculator") { CalculatorScreen() }
             composable("calendar") { CalendarScreen() }
-            composable("hives") { HivesScreen() }
+            composable("hives") {
+                HivesScreen(onHiveClick = { hiveId -> navController.navigate("hive/$hiveId") })
+            }
+            composable(
+                route = "hive/{hiveId}",
+                arguments = listOf(navArgument("hiveId") { type = NavType.IntType })
+            ) {
+                HiveDetailScreen(onBack = { navController.popBackStack() })
+            }
         }
     }
 }

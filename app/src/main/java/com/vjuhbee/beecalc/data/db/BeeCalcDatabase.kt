@@ -13,10 +13,20 @@ import java.util.Calendar
  * Таблицы ульев (Hive, Inspection, Treatment) добавятся в v0.2
  * миграцией с повышением version.
  */
-@Database(entities = [CalendarTaskEntity::class], version = 2, exportSchema = false)
+@Database(
+    entities = [
+        CalendarTaskEntity::class,
+        HiveEntity::class,
+        InspectionEntity::class,
+        TreatmentEntity::class
+    ],
+    version = 3,
+    exportSchema = false
+)
 abstract class BeeCalcDatabase : RoomDatabase() {
 
     abstract fun calendarTaskDao(): CalendarTaskDao
+    abstract fun hiveDao(): HiveDao
 
     companion object {
 
@@ -31,9 +41,44 @@ abstract class BeeCalcDatabase : RoomDatabase() {
             }
         }
 
+        /** v2 → v3: таблицы учёта ульев (SPEC.md §7). */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS hives (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "name TEXT NOT NULL, " +
+                        "note TEXT NOT NULL)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS inspections (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "hiveId INTEGER NOT NULL, " +
+                        "date INTEGER NOT NULL, " +
+                        "frames INTEGER NOT NULL, " +
+                        "brood INTEGER NOT NULL, " +
+                        "queenSeen INTEGER NOT NULL, " +
+                        "note TEXT NOT NULL, " +
+                        "FOREIGN KEY(hiveId) REFERENCES hives(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_inspections_hiveId ON inspections(hiveId)")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS treatments (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "hiveId INTEGER NOT NULL, " +
+                        "date INTEGER NOT NULL, " +
+                        "medicine TEXT NOT NULL, " +
+                        "dose TEXT NOT NULL, " +
+                        "note TEXT NOT NULL, " +
+                        "FOREIGN KEY(hiveId) REFERENCES hives(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_treatments_hiveId ON treatments(hiveId)")
+            }
+        }
+
         fun build(context: Context): BeeCalcDatabase =
             Room.databaseBuilder(context, BeeCalcDatabase::class.java, "beecalc.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
     }
 }

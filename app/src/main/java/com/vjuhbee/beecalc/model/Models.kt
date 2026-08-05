@@ -56,6 +56,34 @@ data class CalendarTask(
     val isDeleted: Boolean = false
 )
 
+/** Улей (SPEC.md §7). */
+data class Hive(
+    val id: Int,          // 0 = новый, id выдаст база
+    val name: String,
+    val note: String = ""
+)
+
+/** Осмотр улья (SPEC.md §7). */
+data class Inspection(
+    val id: Int,
+    val hiveId: Int,
+    val date: Long,       // millis
+    val frames: Int,      // всего рамок
+    val brood: Int,       // рамок с расплодом
+    val queenSeen: Boolean,
+    val note: String = ""
+)
+
+/** Обработка/лечение улья (SPEC.md §7). */
+data class Treatment(
+    val id: Int,
+    val hiveId: Int,
+    val date: Long,       // millis
+    val medicine: String,
+    val dose: String = "",
+    val note: String = ""
+)
+
 /** Статус премиума (SPEC.md §4): модель заложена, UI в v0.1 нет. */
 enum class PremiumState {
     FREE,

@@ -61,7 +61,32 @@
         <item>Декабрь</item>
     </string-array>
 
-    <!-- Ульи (заглушка v0.1) -->
-    <string name="hives_soon_title">Скоро</string>
-    <string name="hives_soon_text">Учёт ульев, осмотры и обработки появятся позже</string>
+    <!-- Ульи -->
+    <string name="hives_title">Мои ульи</string>
+    <string name="hives_empty">Пока нет ульев.\nДобавьте первый — и ведите осмотры и обработки.</string>
+    <string name="hives_add">+ Добавить улей</string>
+    <string name="hive_editor_new">Новый улей</string>
+    <string name="hive_editor_edit">Изменить улей</string>
+    <string name="hive_name_label">Название</string>
+    <string name="hive_note_label">Заметка</string>
+    <string name="hive_back">← Назад</string>
+    <string name="hive_add_inspection">+ Осмотр</string>
+    <string name="hive_add_treatment">+ Обработка</string>
+    <string name="hive_delete">Удалить улей</string>
+    <string name="hive_delete_confirm">Точно удалить?</string>
+    <string name="hive_history_title">История</string>
+    <string name="hive_history_empty">Записей пока нет. Добавьте первый осмотр или обработку.</string>
+    <string name="inspection_label">Осмотр</string>
+    <string name="treatment_label">Обработка</string>
+    <string name="inspection_frames">Рамок</string>
+    <string name="inspection_brood">С расплодом</string>
+    <string name="inspection_queen">Матку видел</string>
+    <string name="inspection_summary">Рамок: %1$d · С расплодом: %2$d</string>
+    <string name="queen_seen_yes">Матка: видел ✓</string>
+    <string name="queen_seen_no">Матка: не видел</string>
+    <string name="date_label">Дата: %1$s</string>
+    <string name="treatment_medicine">Препарат</string>
+    <string name="treatment_dose">Доза</string>
+    <string name="note_label">Заметка</string>
+    <string name="common_ok">ОК</string>
 </resources>
