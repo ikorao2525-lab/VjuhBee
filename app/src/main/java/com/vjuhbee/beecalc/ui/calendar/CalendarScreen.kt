@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -37,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -79,6 +81,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
             item(key = "year_$year") {
                 YearHeader(
                     year = year,
+                    honeyLiters = state.honeyByYear[year] ?: 0.0,
                     isCurrent = isCurrentYear,
                     isExpanded = year in state.expandedYears,
                     onClick = { viewModel.toggleYear(year) }
@@ -182,6 +185,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
 @Composable
 private fun YearHeader(
     year: Int,
+    honeyLiters: Double,
     isCurrent: Boolean,
     isExpanded: Boolean,
     onClick: () -> Unit
@@ -202,16 +206,23 @@ private fun YearHeader(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = if (isCurrent) {
-                    stringResource(R.string.calendar_current_year, year)
-                } else {
-                    stringResource(R.string.calendar_year, year)
-                },
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (isCurrent) {
+                        stringResource(R.string.calendar_current_year, year)
+                    } else {
+                        stringResource(R.string.calendar_year, year)
+                    },
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                if (honeyLiters > 0) {
+                    Text(
+                        text = stringResource(R.string.calendar_year_honey, formatLiters(honeyLiters)),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
             Text(
                 text = if (isExpanded) "−" else "+",
                 style = MaterialTheme.typography.headlineSmall
@@ -325,6 +336,16 @@ private fun TaskCard(
                         MaterialTheme.colorScheme.onSurface
                     }
                 )
+                task.honeyLiters?.let { liters ->
+                    if (liters > 0) {
+                        Text(
+                            text = stringResource(R.string.calendar_task_honey, formatLiters(liters)),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
                 if (expanded) {
                     if (task.fullDescription != null) {
                         Text(
@@ -431,6 +452,9 @@ private fun TaskEditorDialog(
     var month by remember { mutableStateOf(editor.task.month) }
     var category by remember { mutableStateOf(editor.task.category) }
     var isImportant by remember { mutableStateOf(editor.task.importance == Importance.HIGH) }
+    var honeyText by remember {
+        mutableStateOf(editor.task.honeyLiters?.let { formatLiters(it) } ?: "")
+    }
     var confirmDelete by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -503,6 +527,17 @@ private fun TaskEditorDialog(
                     }
                 }
 
+                // Литры мёда — только для работ категории «Медосбор».
+                if (category == TaskCategory.HARVEST) {
+                    OutlinedTextField(
+                        value = honeyText,
+                        onValueChange = { honeyText = it },
+                        label = { Text(stringResource(R.string.editor_honey)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = stringResource(R.string.calendar_important),
@@ -521,7 +556,12 @@ private fun TaskEditorDialog(
                                 fullDescription = fullDescription.trim().ifBlank { null },
                                 month = month,
                                 category = category,
-                                importance = if (isImportant) Importance.HIGH else Importance.NORMAL
+                                importance = if (isImportant) Importance.HIGH else Importance.NORMAL,
+                                honeyLiters = if (category == TaskCategory.HARVEST) {
+                                    parseLiters(honeyText)
+                                } else {
+                                    null
+                                }
                             )
                         )
                     },
@@ -596,6 +636,14 @@ private fun ImportantLabel() {
         )
     }
 }
+
+/** «120» или «37.5» — без хвоста нулей. */
+private fun formatLiters(liters: Double): String =
+    if (liters % 1.0 == 0.0) liters.toInt().toString() else String.format(java.util.Locale.US, "%.1f", liters)
+
+/** Понимает и запятую (русская клавиатура), и точку. */
+private fun parseLiters(text: String): Double? =
+    text.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it > 0 }
 
 private fun categoryNameRes(category: TaskCategory): Int = when (category) {
     TaskCategory.INSPECTION -> R.string.category_inspection

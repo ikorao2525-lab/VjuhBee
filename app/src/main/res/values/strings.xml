@@ -21,6 +21,9 @@
     <string name="calendar_current_month">%1$s — сейчас</string>
     <string name="calendar_year">%1$d год</string>
     <string name="calendar_current_year">%1$d год — сейчас</string>
+    <string name="calendar_year_honey">Мёд: %1$s л</string>
+    <string name="calendar_task_honey">Собрано: %1$s л</string>
+    <string name="editor_honey">Собрано мёда, л</string>
     <string name="calendar_important">Важно</string>
     <string name="calendar_add_task">+ Добавить работу</string>
     <string name="calendar_edit_task">Изменить</string>

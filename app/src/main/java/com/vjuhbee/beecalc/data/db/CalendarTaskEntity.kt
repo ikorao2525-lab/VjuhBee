@@ -22,7 +22,8 @@ data class CalendarTaskEntity(
     val importance: String,
     val tags: String,
     val isDone: Boolean,
-    val isDeleted: Boolean
+    val isDeleted: Boolean,
+    val honeyLiters: Double?
 )
 
 fun CalendarTaskEntity.toModel() = CalendarTask(
@@ -36,7 +37,8 @@ fun CalendarTaskEntity.toModel() = CalendarTask(
     importance = Importance.valueOf(importance),
     tags = if (tags.isBlank()) emptyList() else tags.split(","),
     isDone = isDone,
-    isDeleted = isDeleted
+    isDeleted = isDeleted,
+    honeyLiters = honeyLiters
 )
 
 fun CalendarTask.toEntity() = CalendarTaskEntity(
@@ -50,5 +52,6 @@ fun CalendarTask.toEntity() = CalendarTaskEntity(
     importance = importance.name,
     tags = tags.joinToString(","),
     isDone = isDone,
-    isDeleted = isDeleted
+    isDeleted = isDeleted,
+    honeyLiters = honeyLiters
 )

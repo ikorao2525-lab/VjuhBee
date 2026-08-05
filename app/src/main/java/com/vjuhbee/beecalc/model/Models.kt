@@ -53,7 +53,8 @@ data class CalendarTask(
     val importance: Importance = Importance.NORMAL,
     val tags: List<String> = emptyList(),
     val isDone: Boolean = false,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val honeyLiters: Double? = null      // собрано мёда (для работ «Медосбор»)
 )
 
 /** Улей (SPEC.md §7). */

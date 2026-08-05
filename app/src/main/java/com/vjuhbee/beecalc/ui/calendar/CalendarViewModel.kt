@@ -30,6 +30,7 @@ data class CalendarUiState(
     val currentMonth: Int,                                       // 1..12
     val years: List<Int> = emptyList(),                          // по убыванию: текущий сверху
     val tasksByYearMonth: Map<Int, Map<Int, List<CalendarTask>>> = emptyMap(),
+    val honeyByYear: Map<Int, Double> = emptyMap(),              // итог мёда за год, л
     val expandedYears: Set<Int> = emptySet(),
     val expandedMonths: Set<MonthKey> = emptySet(),
     val deletedTasks: List<CalendarTask> = emptyList(),
@@ -62,6 +63,9 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 currentMonth = currentMonth,
                 years = (byYear.keys + currentYear).sortedDescending(),
                 tasksByYearMonth = byYear.mapValues { (_, yearTasks) -> yearTasks.groupBy { it.month } },
+                honeyByYear = byYear.mapValues { (_, yearTasks) ->
+                    yearTasks.sumOf { it.honeyLiters ?: 0.0 }
+                },
                 expandedYears = years,
                 expandedMonths = months,
                 deletedTasks = deleted,
