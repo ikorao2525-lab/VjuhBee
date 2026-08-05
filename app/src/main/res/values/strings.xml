@@ -1,5 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">BeeCalc</string>
-    <string name="hello_subtitle">Помощник пчеловода</string>
+
+    <!-- Вкладки -->
+    <string name="tab_calculator">Сироп</string>
+    <string name="tab_calendar">Календарь</string>
+    <string name="tab_hives">Ульи</string>
+
+    <!-- Калькулятор -->
+    <string name="calc_volume_label">Объём сиропа: %1$d л</string>
+    <string name="calc_concentration_label">Концентрация</string>
+    <string name="calc_ratio_note">Пропорция: сахар : вода, по весу</string>
+    <string name="calc_sugar_result">Сахар: %1$s кг</string>
+    <string name="calc_water_result">Вода: %1$s л</string>
+    <string name="calc_approximate_note">Расчёт приблизительный</string>
+
+    <!-- Календарь -->
+    <string name="calendar_current_month">%1$s — сейчас</string>
+    <string name="calendar_important">Важно</string>
+    <string name="calendar_tap_for_details">Подробнее…</string>
+    <string name="category_inspection">Осмотр</string>
+    <string name="category_feeding">Кормление</string>
+    <string name="category_treatment">Лечение</string>
+    <string name="category_maintenance">Уход</string>
+    <string name="category_harvest">Медосбор</string>
+    <string name="category_seasonal">Подготовка к сезону</string>
+    <string name="category_other">Прочее</string>
+    <string-array name="month_names">
+        <item>Январь</item>
+        <item>Февраль</item>
+        <item>Март</item>
+        <item>Апрель</item>
+        <item>Май</item>
+        <item>Июнь</item>
+        <item>Июль</item>
+        <item>Август</item>
+        <item>Сентябрь</item>
+        <item>Октябрь</item>
+        <item>Ноябрь</item>
+        <item>Декабрь</item>
+    </string-array>
+
+    <!-- Ульи (заглушка v0.1) -->
+    <string name="hives_soon_title">Скоро</string>
+    <string name="hives_soon_text">Учёт ульев, осмотры и обработки появятся позже</string>
 </resources>

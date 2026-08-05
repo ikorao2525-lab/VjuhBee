@@ -46,7 +46,7 @@
 - Core KTX 1.19.0.
 
 ### Навигация
-- Navigation Compose — добавляется в v0.1, версию зафиксировать здесь при добавлении.
+- Navigation Compose 2.9.8 — используется с v0.1.
 - Нижняя навигация (Bottom Navigation Bar), 3 вкладки.
 
 ### Архитектура
@@ -68,7 +68,8 @@
 
 ### Lifecycle
 - Lifecycle Runtime KTX 2.11.0.
-- Lifecycle ViewModel Compose / Runtime Compose — добавить при появлении первой ViewModel (v0.1), версию зафиксировать здесь.
+- Lifecycle ViewModel Compose 2.11.0 — с v0.1 (первые ViewModel).
+- Lifecycle Runtime Compose 2.11.0 — с v0.1 (collectAsStateWithLifecycle).
 
 ### Монетизация
 - Play Billing Library 8+ — с версии 0.3.
@@ -456,6 +457,9 @@ adb shell monkey -p com.vjuhbee.beecalc -c android.intent.category.LAUNCHER 1
   version catalog, git. Стек: Kotlin 2.2.10, AGP 9.3.1, Gradle 9.5,
   Compose BOM 2026.02.01, minSdk 28, targetSdk/compileSdk 37.
   Осталось проверить: Hello Android на устройстве, GitHub remote.
-- **v0.1** — (план) навигация (Navigation Compose), калькулятор сиропа
-  (слайдер + быстрые кнопки 5/10/20/30/50 + 3 пресета: жидкий/средний/густой),
-  календарь (статичный, с категориями), заглушка ульев.
+- **v0.1** — навигация (Navigation Compose 2.9.8, 3 вкладки), калькулятор сиропа
+  (слайдер 1–50 л + быстрые кнопки 5/10/20/30/50 + 3 пресета: жидкий/средний/густой,
+  логика в domain/SyrupCalculator), календарь (статичный StaticCalendarRepository,
+  36 работ по 12 месяцам, категории текстом, текущий месяц подсвечен и раскрыт),
+  заглушка ульев. MVVM: CalculatorViewModel, CalendarViewModel (StateFlow).
+  Данные календаря — для средней полосы России.
