@@ -73,9 +73,20 @@ class RoomCalendarRepository(private val dao: CalendarTaskDao) : CalendarReposit
         if (dao.countForYear(year) > 0) return
 
         val lastYear = dao.latestYear() ?: return
-        // Отметки и собранный мёд принадлежат своему году — в новый не переносятся.
+        // Отметки и урожай принадлежат своему году — в новый не переносятся.
         val carriedOver = dao.activeTasksForYear(lastYear).map { entity ->
-            entity.copy(id = 0, year = year, isDone = false, honeyLiters = null)
+            entity.copy(
+                id = 0,
+                year = year,
+                isDone = false,
+                honeyKg = null,
+                honeyLiters = null,
+                pollenKg = null,
+                beeBreadKg = null,
+                propolisGrams = null,
+                waxKg = null,
+                royalJellyGrams = null
+            )
         }
         dao.insertAll(carriedOver)
     }

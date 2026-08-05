@@ -23,7 +23,13 @@ data class CalendarTaskEntity(
     val tags: String,
     val isDone: Boolean,
     val isDeleted: Boolean,
-    val honeyLiters: Double?
+    val honeyKg: Double?,
+    val honeyLiters: Double?,
+    val pollenKg: Double?,
+    val beeBreadKg: Double?,
+    val propolisGrams: Double?,
+    val waxKg: Double?,
+    val royalJellyGrams: Double?
 )
 
 fun CalendarTaskEntity.toModel() = CalendarTask(
@@ -38,7 +44,13 @@ fun CalendarTaskEntity.toModel() = CalendarTask(
     tags = if (tags.isBlank()) emptyList() else tags.split(","),
     isDone = isDone,
     isDeleted = isDeleted,
-    honeyLiters = honeyLiters
+    honeyKg = honeyKg,
+    honeyLiters = honeyLiters,
+    pollenKg = pollenKg,
+    beeBreadKg = beeBreadKg,
+    propolisGrams = propolisGrams,
+    waxKg = waxKg,
+    royalJellyGrams = royalJellyGrams
 )
 
 fun CalendarTask.toEntity() = CalendarTaskEntity(
@@ -53,5 +65,11 @@ fun CalendarTask.toEntity() = CalendarTaskEntity(
     tags = tags.joinToString(","),
     isDone = isDone,
     isDeleted = isDeleted,
-    honeyLiters = honeyLiters
+    honeyKg = honeyKg,
+    honeyLiters = honeyLiters,
+    pollenKg = pollenKg,
+    beeBreadKg = beeBreadKg,
+    propolisGrams = propolisGrams,
+    waxKg = waxKg,
+    royalJellyGrams = royalJellyGrams
 )

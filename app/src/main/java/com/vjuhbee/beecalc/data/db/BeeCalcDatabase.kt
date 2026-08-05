@@ -20,7 +20,7 @@ import java.util.Calendar
         InspectionEntity::class,
         TreatmentEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class BeeCalcDatabase : RoomDatabase() {
@@ -83,9 +83,25 @@ abstract class BeeCalcDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * v4 → v5: полный учёт продукции пасеки.
+         * Мёд — кг и л (оба, без автоконвертации: плотность зависит от сорта).
+         * Пыльца/перга/воск — кг; прополис и маточное молочко — граммы.
+         */
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE calendar_tasks ADD COLUMN honeyKg REAL")
+                db.execSQL("ALTER TABLE calendar_tasks ADD COLUMN pollenKg REAL")
+                db.execSQL("ALTER TABLE calendar_tasks ADD COLUMN beeBreadKg REAL")
+                db.execSQL("ALTER TABLE calendar_tasks ADD COLUMN propolisGrams REAL")
+                db.execSQL("ALTER TABLE calendar_tasks ADD COLUMN waxKg REAL")
+                db.execSQL("ALTER TABLE calendar_tasks ADD COLUMN royalJellyGrams REAL")
+            }
+        }
+
         fun build(context: Context): BeeCalcDatabase =
             Room.databaseBuilder(context, BeeCalcDatabase::class.java, "beecalc.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
     }
 }

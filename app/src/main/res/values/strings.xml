@@ -21,9 +21,22 @@
     <string name="calendar_current_month">%1$s — сейчас</string>
     <string name="calendar_year">%1$d год</string>
     <string name="calendar_current_year">%1$d год — сейчас</string>
-    <string name="calendar_year_honey">Мёд: %1$s л</string>
-    <string name="calendar_task_honey">Собрано: %1$s л</string>
-    <string name="editor_honey">Собрано мёда, л</string>
+    <!-- Сбор продукции (мёд, пыльца, перга, прополис, воск, маточное молочко) -->
+    <string name="editor_harvest_section">Сбор продукции (необязательно)</string>
+    <string name="editor_honey_kg">Мёд, кг</string>
+    <string name="editor_honey_l">Мёд, л</string>
+    <string name="editor_pollen">Пыльца, кг</string>
+    <string name="editor_bee_bread">Перга, кг</string>
+    <string name="editor_propolis">Прополис, г</string>
+    <string name="editor_wax">Воск, кг</string>
+    <string name="editor_royal_jelly">Маточное молочко, г</string>
+    <string name="harvest_honey_kg">Мёд: %1$s кг</string>
+    <string name="harvest_honey_l">Мёд: %1$s л</string>
+    <string name="harvest_pollen">Пыльца: %1$s кг</string>
+    <string name="harvest_bee_bread">Перга: %1$s кг</string>
+    <string name="harvest_propolis">Прополис: %1$s г</string>
+    <string name="harvest_wax">Воск: %1$s кг</string>
+    <string name="harvest_royal_jelly">Молочко: %1$s г</string>
     <string name="calendar_important">Важно</string>
     <string name="calendar_add_task">+ Добавить работу</string>
     <string name="calendar_edit_task">Изменить</string>

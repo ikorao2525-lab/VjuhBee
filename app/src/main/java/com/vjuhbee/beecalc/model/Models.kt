@@ -54,8 +54,33 @@ data class CalendarTask(
     val tags: List<String> = emptyList(),
     val isDone: Boolean = false,
     val isDeleted: Boolean = false,
-    val honeyLiters: Double? = null      // собрано мёда (для работ «Медосбор»)
+    /** Сбор продукции с пасеки (все поля необязательные). */
+    val honeyKg: Double? = null,
+    val honeyLiters: Double? = null,
+    val pollenKg: Double? = null,          // цветочная пыльца (обножка)
+    val beeBreadKg: Double? = null,        // перга
+    val propolisGrams: Double? = null,     // прополис — обычно граммы
+    val waxKg: Double? = null,             // воск
+    val royalJellyGrams: Double? = null    // маточное молочко — обычно граммы
 )
+
+/**
+ * Итоги сбора продукции за год (суммы по всем работам).
+ * Нули не показываются в UI.
+ */
+data class YearHarvestTotals(
+    val honeyKg: Double = 0.0,
+    val honeyLiters: Double = 0.0,
+    val pollenKg: Double = 0.0,
+    val beeBreadKg: Double = 0.0,
+    val propolisGrams: Double = 0.0,
+    val waxKg: Double = 0.0,
+    val royalJellyGrams: Double = 0.0
+) {
+    val hasAny: Boolean
+        get() = honeyKg > 0 || honeyLiters > 0 || pollenKg > 0 ||
+            beeBreadKg > 0 || propolisGrams > 0 || waxKg > 0 || royalJellyGrams > 0
+}
 
 /** Улей (SPEC.md §7). */
 data class Hive(

@@ -48,6 +48,7 @@ import com.vjuhbee.beecalc.R
 import com.vjuhbee.beecalc.model.CalendarTask
 import com.vjuhbee.beecalc.model.Importance
 import com.vjuhbee.beecalc.model.TaskCategory
+import com.vjuhbee.beecalc.model.YearHarvestTotals
 
 /**
  * Сезонный календарь работ (SPEC.md §5.2).
@@ -81,7 +82,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
             item(key = "year_$year") {
                 YearHeader(
                     year = year,
-                    honeyLiters = state.honeyByYear[year] ?: 0.0,
+                    harvest = state.harvestByYear[year] ?: YearHarvestTotals(),
                     isCurrent = isCurrentYear,
                     isExpanded = year in state.expandedYears,
                     onClick = { viewModel.toggleYear(year) }
@@ -185,7 +186,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
 @Composable
 private fun YearHeader(
     year: Int,
-    honeyLiters: Double,
+    harvest: YearHarvestTotals,
     isCurrent: Boolean,
     isExpanded: Boolean,
     onClick: () -> Unit
@@ -216,12 +217,7 @@ private fun YearHeader(
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
-                if (honeyLiters > 0) {
-                    Text(
-                        text = stringResource(R.string.calendar_year_honey, formatLiters(honeyLiters)),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
+                HarvestSummary(harvest = harvest, style = MaterialTheme.typography.titleMedium)
             }
             Text(
                 text = if (isExpanded) "−" else "+",
@@ -336,16 +332,12 @@ private fun TaskCard(
                         MaterialTheme.colorScheme.onSurface
                     }
                 )
-                task.honeyLiters?.let { liters ->
-                    if (liters > 0) {
-                        Text(
-                            text = stringResource(R.string.calendar_task_honey, formatLiters(liters)),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+                HarvestSummary(
+                    harvest = task.toHarvestTotals(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    bold = true
+                )
                 if (expanded) {
                     if (task.fullDescription != null) {
                         Text(
@@ -452,9 +444,13 @@ private fun TaskEditorDialog(
     var month by remember { mutableStateOf(editor.task.month) }
     var category by remember { mutableStateOf(editor.task.category) }
     var isImportant by remember { mutableStateOf(editor.task.importance == Importance.HIGH) }
-    var honeyText by remember {
-        mutableStateOf(editor.task.honeyLiters?.let { formatLiters(it) } ?: "")
-    }
+    var honeyKgText by remember { mutableStateOf(editor.task.honeyKg.toAmountText()) }
+    var honeyLitersText by remember { mutableStateOf(editor.task.honeyLiters.toAmountText()) }
+    var pollenText by remember { mutableStateOf(editor.task.pollenKg.toAmountText()) }
+    var beeBreadText by remember { mutableStateOf(editor.task.beeBreadKg.toAmountText()) }
+    var propolisText by remember { mutableStateOf(editor.task.propolisGrams.toAmountText()) }
+    var waxText by remember { mutableStateOf(editor.task.waxKg.toAmountText()) }
+    var royalJellyText by remember { mutableStateOf(editor.task.royalJellyGrams.toAmountText()) }
     var confirmDelete by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -527,16 +523,19 @@ private fun TaskEditorDialog(
                     }
                 }
 
-                // Литры мёда — только для работ категории «Медосбор».
-                if (category == TaskCategory.HARVEST) {
-                    OutlinedTextField(
-                        value = honeyText,
-                        onValueChange = { honeyText = it },
-                        label = { Text(stringResource(R.string.editor_honey)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                // Сбор продукции — необязательные поля, доступны для любой работы
+                // (пыльцу или прополис можно собрать и в день «Ухода»).
+                Text(
+                    text = stringResource(R.string.editor_harvest_section),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                HarvestField(honeyKgText, { honeyKgText = it }, R.string.editor_honey_kg)
+                HarvestField(honeyLitersText, { honeyLitersText = it }, R.string.editor_honey_l)
+                HarvestField(pollenText, { pollenText = it }, R.string.editor_pollen)
+                HarvestField(beeBreadText, { beeBreadText = it }, R.string.editor_bee_bread)
+                HarvestField(propolisText, { propolisText = it }, R.string.editor_propolis)
+                HarvestField(waxText, { waxText = it }, R.string.editor_wax)
+                HarvestField(royalJellyText, { royalJellyText = it }, R.string.editor_royal_jelly)
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -557,11 +556,13 @@ private fun TaskEditorDialog(
                                 month = month,
                                 category = category,
                                 importance = if (isImportant) Importance.HIGH else Importance.NORMAL,
-                                honeyLiters = if (category == TaskCategory.HARVEST) {
-                                    parseLiters(honeyText)
-                                } else {
-                                    null
-                                }
+                                honeyKg = parseAmount(honeyKgText),
+                                honeyLiters = parseAmount(honeyLitersText),
+                                pollenKg = parseAmount(pollenText),
+                                beeBreadKg = parseAmount(beeBreadText),
+                                propolisGrams = parseAmount(propolisText),
+                                waxKg = parseAmount(waxText),
+                                royalJellyGrams = parseAmount(royalJellyText)
                             )
                         )
                     },
@@ -637,12 +638,81 @@ private fun ImportantLabel() {
     }
 }
 
+@Composable
+private fun HarvestField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    labelRes: Int
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(stringResource(labelRes)) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+/** Сводка по сбору: только ненулевые продукты, через « · ». */
+@Composable
+private fun HarvestSummary(
+    harvest: YearHarvestTotals,
+    style: androidx.compose.ui.text.TextStyle,
+    color: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified,
+    bold: Boolean = false
+) {
+    if (!harvest.hasAny) return
+    val parts = buildList {
+        if (harvest.honeyKg > 0) {
+            add(stringResource(R.string.harvest_honey_kg, formatAmount(harvest.honeyKg)))
+        }
+        if (harvest.honeyLiters > 0) {
+            add(stringResource(R.string.harvest_honey_l, formatAmount(harvest.honeyLiters)))
+        }
+        if (harvest.pollenKg > 0) {
+            add(stringResource(R.string.harvest_pollen, formatAmount(harvest.pollenKg)))
+        }
+        if (harvest.beeBreadKg > 0) {
+            add(stringResource(R.string.harvest_bee_bread, formatAmount(harvest.beeBreadKg)))
+        }
+        if (harvest.propolisGrams > 0) {
+            add(stringResource(R.string.harvest_propolis, formatAmount(harvest.propolisGrams)))
+        }
+        if (harvest.waxKg > 0) {
+            add(stringResource(R.string.harvest_wax, formatAmount(harvest.waxKg)))
+        }
+        if (harvest.royalJellyGrams > 0) {
+            add(stringResource(R.string.harvest_royal_jelly, formatAmount(harvest.royalJellyGrams)))
+        }
+    }
+    Text(
+        text = parts.joinToString(" · "),
+        style = style,
+        fontWeight = if (bold) FontWeight.Bold else null,
+        color = color
+    )
+}
+
+private fun CalendarTask.toHarvestTotals() = YearHarvestTotals(
+    honeyKg = honeyKg ?: 0.0,
+    honeyLiters = honeyLiters ?: 0.0,
+    pollenKg = pollenKg ?: 0.0,
+    beeBreadKg = beeBreadKg ?: 0.0,
+    propolisGrams = propolisGrams ?: 0.0,
+    waxKg = waxKg ?: 0.0,
+    royalJellyGrams = royalJellyGrams ?: 0.0
+)
+
 /** «120» или «37.5» — без хвоста нулей. */
-private fun formatLiters(liters: Double): String =
-    if (liters % 1.0 == 0.0) liters.toInt().toString() else String.format(java.util.Locale.US, "%.1f", liters)
+private fun formatAmount(value: Double): String =
+    if (value % 1.0 == 0.0) value.toInt().toString()
+    else String.format(java.util.Locale.US, "%.1f", value)
+
+private fun Double?.toAmountText(): String =
+    this?.takeIf { it > 0 }?.let { formatAmount(it) } ?: ""
 
 /** Понимает и запятую (русская клавиатура), и точку. */
-private fun parseLiters(text: String): Double? =
+private fun parseAmount(text: String): Double? =
     text.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it > 0 }
 
 private fun categoryNameRes(category: TaskCategory): Int = when (category) {

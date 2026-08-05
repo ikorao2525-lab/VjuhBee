@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.vjuhbee.beecalc.BeeCalcApp
 import com.vjuhbee.beecalc.model.CalendarTask
 import com.vjuhbee.beecalc.model.TaskCategory
+import com.vjuhbee.beecalc.model.YearHarvestTotals
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +31,7 @@ data class CalendarUiState(
     val currentMonth: Int,                                       // 1..12
     val years: List<Int> = emptyList(),                          // по убыванию: текущий сверху
     val tasksByYearMonth: Map<Int, Map<Int, List<CalendarTask>>> = emptyMap(),
-    val honeyByYear: Map<Int, Double> = emptyMap(),              // итог мёда за год, л
+    val harvestByYear: Map<Int, YearHarvestTotals> = emptyMap(), // итоги сбора за год
     val expandedYears: Set<Int> = emptySet(),
     val expandedMonths: Set<MonthKey> = emptySet(),
     val deletedTasks: List<CalendarTask> = emptyList(),
@@ -63,8 +64,16 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 currentMonth = currentMonth,
                 years = (byYear.keys + currentYear).sortedDescending(),
                 tasksByYearMonth = byYear.mapValues { (_, yearTasks) -> yearTasks.groupBy { it.month } },
-                honeyByYear = byYear.mapValues { (_, yearTasks) ->
-                    yearTasks.sumOf { it.honeyLiters ?: 0.0 }
+                harvestByYear = byYear.mapValues { (_, yearTasks) ->
+                    YearHarvestTotals(
+                        honeyKg = yearTasks.sumOf { it.honeyKg ?: 0.0 },
+                        honeyLiters = yearTasks.sumOf { it.honeyLiters ?: 0.0 },
+                        pollenKg = yearTasks.sumOf { it.pollenKg ?: 0.0 },
+                        beeBreadKg = yearTasks.sumOf { it.beeBreadKg ?: 0.0 },
+                        propolisGrams = yearTasks.sumOf { it.propolisGrams ?: 0.0 },
+                        waxKg = yearTasks.sumOf { it.waxKg ?: 0.0 },
+                        royalJellyGrams = yearTasks.sumOf { it.royalJellyGrams ?: 0.0 }
+                    )
                 },
                 expandedYears = years,
                 expandedMonths = months,
