@@ -19,9 +19,15 @@
     <!-- Календарь -->
     <string name="calendar_region_note">Сроки работ — для средней полосы России. Всё можно изменить под свой регион: нажмите на работу, затем «Изменить».</string>
     <string name="calendar_current_month">%1$s — сейчас</string>
+    <string name="calendar_year">%1$d год</string>
+    <string name="calendar_current_year">%1$d год — сейчас</string>
     <string name="calendar_important">Важно</string>
     <string name="calendar_add_task">+ Добавить работу</string>
     <string name="calendar_edit_task">Изменить</string>
+    <string name="calendar_trash_header">Удалённые работы (%1$d)</string>
+    <string name="calendar_restore">Вернуть</string>
+    <string name="calendar_delete_forever">Насовсем</string>
+    <string name="calendar_delete_forever_confirm">Точно насовсем?</string>
     <!-- Редактор работы -->
     <string name="editor_title_new">Новая работа</string>
     <string name="editor_title_edit">Изменить работу</string>

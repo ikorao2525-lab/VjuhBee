@@ -2,6 +2,7 @@ package com.vjuhbee.beecalc.ui.calculator
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -134,18 +135,22 @@ private fun PresetButton(
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         )
     }
+    // Узкие внутренние отступы: стандартные 24dp съедали ширину,
+    // и «жидкий»/«средний» переносились по буквам.
     Button(
         onClick = onClick,
         colors = colors,
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
         modifier = modifier.heightIn(min = 64.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = preset.ratioLabel,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
             )
-            Text(text = preset.name, style = MaterialTheme.typography.bodyMedium)
+            Text(text = preset.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
         }
     }
 }

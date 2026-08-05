@@ -36,9 +36,15 @@ enum class Importance {
     HIGH
 }
 
-/** Работа в сезонном календаре (SPEC.md §5.2). */
+/**
+ * Работа в сезонном календаре (SPEC.md §5.2).
+ * У каждого года — свой набор работ: в новом году список копируется
+ * из прошлого со сброшенными отметками, а прошлый год остаётся архивом.
+ * Удалённые работы не пропадают, а попадают в корзину (isDeleted).
+ */
 data class CalendarTask(
     val id: Int,                         // 0 = новая, id выдаст база
+    val year: Int = 0,                   // год выставляется при сохранении
     val month: Int,                      // 1..12
     val title: String,
     val shortDescription: String,
@@ -46,7 +52,8 @@ data class CalendarTask(
     val category: TaskCategory,
     val importance: Importance = Importance.NORMAL,
     val tags: List<String> = emptyList(),
-    val isDone: Boolean = false
+    val isDone: Boolean = false,
+    val isDeleted: Boolean = false
 )
 
 /** Статус премиума (SPEC.md §4): модель заложена, UI в v0.1 нет. */

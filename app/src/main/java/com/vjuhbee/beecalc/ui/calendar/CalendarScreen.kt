@@ -49,13 +49,15 @@ import com.vjuhbee.beecalc.model.TaskCategory
 
 /**
  * Сезонный календарь работ (SPEC.md §5.2).
- * Работы можно отмечать выполненными, редактировать, удалять
- * и добавлять свои — база в Room, стартовый список для средней полосы.
+ * Структура: годы → месяцы → работы. Текущий год и месяц раскрыты.
+ * Прошлые годы — архив с сохранёнными отметками.
+ * Удалённые работы лежат в корзине внизу, их можно вернуть.
  */
 @Composable
 fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val monthNames = stringArrayResource(R.array.month_names)
+    var trashExpanded by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -69,40 +71,98 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
                 modifier = Modifier.padding(bottom = 4.dp)
             )
         }
-        (1..12).forEach { month ->
-            val tasks = state.tasksByMonth[month].orEmpty()
-            val isCurrent = month == state.currentMonth
-            val isExpanded = month in state.expandedMonths
 
-            item(key = "month_$month") {
-                MonthHeader(
-                    name = monthNames[month - 1],
-                    taskCount = tasks.size,
-                    isCurrent = isCurrent,
-                    isExpanded = isExpanded,
-                    onClick = { viewModel.toggleMonth(month) }
+        state.years.forEach { year ->
+            val isCurrentYear = year == state.currentYear
+            val monthsOfYear = state.tasksByYearMonth[year].orEmpty()
+
+            item(key = "year_$year") {
+                YearHeader(
+                    year = year,
+                    isCurrent = isCurrentYear,
+                    isExpanded = year in state.expandedYears,
+                    onClick = { viewModel.toggleYear(year) }
                 )
             }
-            if (isExpanded) {
-                items(tasks, key = { "task_${it.id}" }) { task ->
-                    TaskCard(
-                        task = task,
-                        onDoneChange = { done -> viewModel.setDone(task, done) },
-                        onEdit = { viewModel.startEdit(task) }
-                    )
-                }
-                item(key = "add_$month") {
-                    OutlinedButton(
-                        onClick = { viewModel.startAdd(month) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.calendar_add_task),
-                            style = MaterialTheme.typography.titleMedium
+
+            if (year in state.expandedYears) {
+                (1..12).forEach { month ->
+                    val tasks = monthsOfYear[month].orEmpty()
+                    val isCurrentMonth = isCurrentYear && month == state.currentMonth
+                    val isExpanded = MonthKey(year, month) in state.expandedMonths
+
+                    item(key = "month_${year}_$month") {
+                        MonthHeader(
+                            name = monthNames[month - 1],
+                            taskCount = tasks.size,
+                            isCurrent = isCurrentMonth,
+                            isExpanded = isExpanded,
+                            onClick = { viewModel.toggleMonth(year, month) }
                         )
                     }
+                    if (isExpanded) {
+                        items(tasks, key = { "task_${it.id}" }) { task ->
+                            TaskCard(
+                                task = task,
+                                onDoneChange = { done -> viewModel.setDone(task, done) },
+                                onEdit = { viewModel.startEdit(task) },
+                                onDelete = { viewModel.deleteTask(task) }
+                            )
+                        }
+                        item(key = "add_${year}_$month") {
+                            OutlinedButton(
+                                onClick = { viewModel.startAdd(year, month) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.calendar_add_task),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (state.deletedTasks.isNotEmpty()) {
+            item(key = "trash_header") {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                        .clickable { trashExpanded = !trashExpanded }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 56.dp)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.calendar_trash_header, state.deletedTasks.size),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = if (trashExpanded) "−" else "+",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
+                }
+            }
+            if (trashExpanded) {
+                items(state.deletedTasks, key = { "trash_${it.id}" }) { task ->
+                    TrashCard(
+                        task = task,
+                        monthNames = monthNames,
+                        onRestore = { viewModel.restoreTask(task) },
+                        onDeleteForever = { viewModel.deleteForever(task) }
+                    )
                 }
             }
         }
@@ -116,6 +176,47 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
             onDelete = { viewModel.deleteTask(it) },
             onDismiss = { viewModel.closeEditor() }
         )
+    }
+}
+
+@Composable
+private fun YearHeader(
+    year: Int,
+    isCurrent: Boolean,
+    isExpanded: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondary,
+            contentColor = MaterialTheme.colorScheme.onSecondary
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (isCurrent) {
+                    stringResource(R.string.calendar_current_year, year)
+                } else {
+                    stringResource(R.string.calendar_year, year)
+                },
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = if (isExpanded) "−" else "+",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        }
     }
 }
 
@@ -168,9 +269,10 @@ private fun MonthHeader(
 private fun TaskCard(
     task: CalendarTask,
     onDoneChange: (Boolean) -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
-    // Нажатие раскрывает карточку: полное описание и кнопка «Изменить».
+    // Нажатие раскрывает карточку: полное описание и кнопки действий.
     var expanded by remember { mutableStateOf(false) }
 
     Card(
@@ -230,12 +332,83 @@ private fun TaskCard(
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
-                    OutlinedButton(
-                        onClick = onEdit,
-                        modifier = Modifier.heightIn(min = 48.dp)
-                    ) {
-                        Text(text = stringResource(R.string.calendar_edit_task))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = onEdit,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp)
+                        ) {
+                            Text(text = stringResource(R.string.calendar_edit_task))
+                        }
+                        // Удаление обратимо: работа уезжает в корзину внизу списка.
+                        OutlinedButton(
+                            onClick = onDelete,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.editor_delete),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrashCard(
+    task: CalendarTask,
+    monthNames: Array<String>,
+    onRestore: () -> Unit,
+    onDeleteForever: () -> Unit
+) {
+    var confirmForever by remember { mutableStateOf(false) }
+
+    Card {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = task.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "${monthNames[task.month - 1]} ${task.year}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onRestore,
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                ) {
+                    Text(stringResource(R.string.calendar_restore))
+                }
+                OutlinedButton(
+                    onClick = {
+                        if (confirmForever) onDeleteForever() else confirmForever = true
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (confirmForever) R.string.calendar_delete_forever_confirm
+                            else R.string.calendar_delete_forever
+                        ),
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }

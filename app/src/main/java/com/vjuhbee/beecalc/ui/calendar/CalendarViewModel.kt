@@ -21,11 +21,18 @@ data class TaskEditor(
     val isNew: Boolean
 )
 
+/** Ключ раскрытого месяца: год + месяц. */
+data class MonthKey(val year: Int, val month: Int)
+
 /** Состояние экрана календаря. */
 data class CalendarUiState(
-    val currentMonth: Int,                          // 1..12
-    val tasksByMonth: Map<Int, List<CalendarTask>> = emptyMap(),
-    val expandedMonths: Set<Int> = emptySet(),
+    val currentYear: Int,
+    val currentMonth: Int,                                       // 1..12
+    val years: List<Int> = emptyList(),                          // по убыванию: текущий сверху
+    val tasksByYearMonth: Map<Int, Map<Int, List<CalendarTask>>> = emptyMap(),
+    val expandedYears: Set<Int> = emptySet(),
+    val expandedMonths: Set<MonthKey> = emptySet(),
+    val deletedTasks: List<CalendarTask> = emptyList(),
     val editor: TaskEditor? = null
 )
 
@@ -33,42 +40,66 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repository = (app as BeeCalcApp).calendarRepository
 
+    private val currentYear = Calendar.getInstance().get(Calendar.YEAR)
     private val currentMonth = Calendar.getInstance().get(Calendar.MONTH) + 1
 
-    // Текущий месяц раскрыт сразу — за ним пользователь и пришёл.
-    private val expandedMonths = MutableStateFlow(setOf(currentMonth))
+    // Текущий год и месяц раскрыты сразу — за ними пользователь и пришёл.
+    private val expandedYears = MutableStateFlow(setOf(currentYear))
+    private val expandedMonths = MutableStateFlow(setOf(MonthKey(currentYear, currentMonth)))
     private val editor = MutableStateFlow<TaskEditor?>(null)
 
     val uiState: StateFlow<CalendarUiState> =
-        combine(repository.observeTasks(), expandedMonths, editor) { tasks, expanded, editorState ->
+        combine(
+            repository.observeTasks(),
+            repository.observeDeleted(),
+            expandedYears,
+            expandedMonths,
+            editor
+        ) { tasks, deleted, years, months, editorState ->
+            val byYear = tasks.groupBy { it.year }
             CalendarUiState(
+                currentYear = currentYear,
                 currentMonth = currentMonth,
-                tasksByMonth = tasks.groupBy { it.month },
-                expandedMonths = expanded,
+                years = (byYear.keys + currentYear).sortedDescending(),
+                tasksByYearMonth = byYear.mapValues { (_, yearTasks) -> yearTasks.groupBy { it.month } },
+                expandedYears = years,
+                expandedMonths = months,
+                deletedTasks = deleted,
                 editor = editorState
             )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = CalendarUiState(currentMonth = currentMonth, expandedMonths = setOf(currentMonth))
+            initialValue = CalendarUiState(
+                currentYear = currentYear,
+                currentMonth = currentMonth,
+                expandedYears = setOf(currentYear),
+                expandedMonths = setOf(MonthKey(currentYear, currentMonth))
+            )
         )
 
     init {
-        viewModelScope.launch { repository.seedDefaultsIfEmpty() }
+        viewModelScope.launch { repository.prepareYear(currentYear) }
     }
 
-    fun toggleMonth(month: Int) {
-        expandedMonths.update { if (month in it) it - month else it + month }
+    fun toggleYear(year: Int) {
+        expandedYears.update { if (year in it) it - year else it + year }
+    }
+
+    fun toggleMonth(year: Int, month: Int) {
+        val key = MonthKey(year, month)
+        expandedMonths.update { if (key in it) it - key else it + key }
     }
 
     fun setDone(task: CalendarTask, done: Boolean) {
         viewModelScope.launch { repository.updateTask(task.copy(isDone = done)) }
     }
 
-    fun startAdd(month: Int) {
+    fun startAdd(year: Int, month: Int) {
         editor.value = TaskEditor(
             task = CalendarTask(
                 id = 0,
+                year = year,
                 month = month,
                 title = "",
                 shortDescription = "",
@@ -93,10 +124,19 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** «Удалить» отправляет работу в корзину — её можно вернуть. */
     fun deleteTask(task: CalendarTask) {
         viewModelScope.launch {
-            repository.deleteTask(task)
+            repository.moveToTrash(task)
             editor.value = null
         }
+    }
+
+    fun restoreTask(task: CalendarTask) {
+        viewModelScope.launch { repository.restoreFromTrash(task) }
+    }
+
+    fun deleteForever(task: CalendarTask) {
+        viewModelScope.launch { repository.deleteForever(task) }
     }
 }

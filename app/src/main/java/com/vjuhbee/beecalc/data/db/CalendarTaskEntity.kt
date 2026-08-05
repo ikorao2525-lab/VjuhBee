@@ -13,6 +13,7 @@ import com.vjuhbee.beecalc.model.TaskCategory
 @Entity(tableName = "calendar_tasks")
 data class CalendarTaskEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val year: Int,
     val month: Int,
     val title: String,
     val shortDescription: String,
@@ -20,11 +21,13 @@ data class CalendarTaskEntity(
     val category: String,
     val importance: String,
     val tags: String,
-    val isDone: Boolean
+    val isDone: Boolean,
+    val isDeleted: Boolean
 )
 
 fun CalendarTaskEntity.toModel() = CalendarTask(
     id = id,
+    year = year,
     month = month,
     title = title,
     shortDescription = shortDescription,
@@ -32,11 +35,13 @@ fun CalendarTaskEntity.toModel() = CalendarTask(
     category = TaskCategory.valueOf(category),
     importance = Importance.valueOf(importance),
     tags = if (tags.isBlank()) emptyList() else tags.split(","),
-    isDone = isDone
+    isDone = isDone,
+    isDeleted = isDeleted
 )
 
 fun CalendarTask.toEntity() = CalendarTaskEntity(
     id = id,
+    year = year,
     month = month,
     title = title,
     shortDescription = shortDescription,
@@ -44,5 +49,6 @@ fun CalendarTask.toEntity() = CalendarTaskEntity(
     category = category.name,
     importance = importance.name,
     tags = tags.joinToString(","),
-    isDone = isDone
+    isDone = isDone,
+    isDeleted = isDeleted
 )

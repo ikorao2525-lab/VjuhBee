@@ -10,12 +10,25 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface CalendarTaskDao {
 
-    /** Flow: календарь сам обновится при любом изменении данных. */
-    @Query("SELECT * FROM calendar_tasks ORDER BY month, id")
-    fun observeAll(): Flow<List<CalendarTaskEntity>>
+    /** Действующие работы всех лет. Flow: UI обновится при любом изменении. */
+    @Query("SELECT * FROM calendar_tasks WHERE isDeleted = 0 ORDER BY year DESC, month, id")
+    fun observeActive(): Flow<List<CalendarTaskEntity>>
+
+    /** Корзина: удалённые работы, их можно вернуть. */
+    @Query("SELECT * FROM calendar_tasks WHERE isDeleted = 1 ORDER BY year DESC, month, id")
+    fun observeDeleted(): Flow<List<CalendarTaskEntity>>
 
     @Query("SELECT COUNT(*) FROM calendar_tasks")
     suspend fun count(): Int
+
+    @Query("SELECT COUNT(*) FROM calendar_tasks WHERE year = :year")
+    suspend fun countForYear(year: Int): Int
+
+    @Query("SELECT MAX(year) FROM calendar_tasks")
+    suspend fun latestYear(): Int?
+
+    @Query("SELECT * FROM calendar_tasks WHERE year = :year AND isDeleted = 0")
+    suspend fun activeTasksForYear(year: Int): List<CalendarTaskEntity>
 
     @Insert
     suspend fun insert(task: CalendarTaskEntity)
@@ -26,6 +39,7 @@ interface CalendarTaskDao {
     @Update
     suspend fun update(task: CalendarTaskEntity)
 
+    /** Окончательное удаление строки (из корзины). */
     @Delete
     suspend fun delete(task: CalendarTaskEntity)
 }
