@@ -81,6 +81,7 @@
 ### Генерация QR (с v0.4)
 - ZXing core 3.5.4 — генерация и декодирование штрих-кодов/QR, офлайн,
   без Google-сервисов (SPEC.md §9, v0.4).
+- androidx.print 1.1.0 — системный диалог печати QR (SPEC.md §9, v0.4).
 
 ### Сборка
 - Android Gradle Plugin 9.3.1 (Kotlin-поддержка встроена, отдельный kotlin-android плагин не нужен).
@@ -540,11 +541,12 @@ CloudTips подключён: `https://pay.cloudtips.ru/p/99472576` (TIPS_URL в
 - [x] Генерация QR (ZXing Core 3.5.4, офлайн) — `utils/QrUtils.kt`,
   кодирует `beecalc://hive/<uuid>`, показ на экране улья (кнопка
   «Показать QR» + диалог).
-- [ ] Печать/сохранение через системный диалог («Поделиться», FileProvider).
+- [x] «Поделиться» (Intent.ACTION_SEND, PNG через FileProvider)
+  и «Печать» (androidx.print.PrintHelper) в диалоге QR.
 - [ ] Сканирование камерой (zxing-android-embedded, без Google-сервисов) →
   открывается экран улья. Первое разрешение приложения: камера.
-- [ ] Рекомендация в UI: наклейка от 5×5 см, матовая ламинация
-  (текст-подсказка уже добавлена в диалог QR).
+- [x] Рекомендация в UI: наклейка от 5×5 см, матовая ламинация
+  (текст-подсказка в диалоге QR).
 
 ### v0.5 — привязка работ к ульям (план)
 - Таблица связей «многие ко многим» (одна работа — несколько ульев).
@@ -718,5 +720,8 @@ adb shell monkey -p com.vjuhbee.beecalc -c android.intent.category.LAUNCHER 1
   (`UUID.randomUUID()` в HivesViewModel). UUID переживает перенос базы и
   ляжет в основу QR-кодов (в работе).
 - **v0.3.3** (ветка `beta`) — генерация QR улья: ZXing Core 3.5.4,
-  `utils/QrUtilskt` (`beecalc://hive/<uuid>`), кнопка «Показать QR» +
+  `utils/QrUtils.kt` (`beecalc://hive/<uuid>`), кнопка «Показать QR» +
   диалог с QR и подсказкой про наклейку 5×5. Собрано: `app-beta-debug.apk`.
+- **v0.3.4** (ветка `beta`) — в диалоге QR кнопки «Поделиться»
+  (Intent.ACTION_SEND, PNG через FileProvider, `res/xml/file_paths.xml`)
+  и «Печать» (androidx.print 1.1.0).

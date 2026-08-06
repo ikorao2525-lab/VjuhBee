@@ -112,7 +112,9 @@
     <string name="hive_qr_title">QR-код улья</string>
     <string name="hive_qr_hint">Наклейте этот QR на улей (минимум 5×5 см, матовая ламинация). Сканирование откроет улей в приложении.</string>
     <string name="hive_qr_share">Поделиться</string>
+    <string name="hive_qr_print">Печать</string>
     <string name="hive_qr_close">Закрыть</string>
+    <string name="hive_qr_share_title">Поделиться QR-кодом улья</string>
 
     <!-- О приложении / чаевые (v0.3.1) -->
     <string name="about_title">О приложении</string>

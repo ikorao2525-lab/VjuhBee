@@ -1,5 +1,7 @@
 package com.vjuhbee.beecalc.ui.hives
 
+import android.content.Intent
+import android.graphics.Bitmap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -38,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -53,7 +56,7 @@ import com.vjuhbee.beecalc.model.Treatment
 import com.vjuhbee.beecalc.model.Hive
 import com.vjuhbee.beecalc.utils.formatDate
 import com.vjuhbee.beecalc.utils.generateHiveQr
-import android.graphics.Bitmap
+import com.vjuhbee.beecalc.utils.saveQrToCache
 
 /**
  * Экран одного улья (SPEC.md §7): данные улья и история —
@@ -568,17 +571,38 @@ private fun NumberStepper(
 }
 
 /**
- * Диалог QR-кода улья (SPEC.md §9, v0.4): показ сгенерированной картинки
- * и подсказкой про наклейку. Пока без «Поделиться» (сохранение/печать —
- * отдельным шагом v0.4.x, чтобы не раздувать манифест FileProvider).
+ * Диалог QR-кода улья (SPEC.md §9, v0.4): показ QR, кнопки
+ * «Поделиться» (Intent.ACTION_SEND через FileProvider) и «Печать»
+ * (встроенный android.print.PrintHelper).
  */
 @Composable
 private fun HiveQrDialog(
     hive: Hive,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     val qrBitmap: Bitmap? = remember(hive.uuid) {
         if (hive.uuid.isBlank()) null else generateHiveQr(hive.uuid)
+    }
+
+    fun shareQr() {
+        val bitmap = qrBitmap ?: return
+        val uri = saveQrToCache(context, bitmap, "hive_${hive.uuid}.png")
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "image/png"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(
+            Intent.createChooser(intent, context.getString(R.string.hive_qr_share_title))
+        )
+    }
+
+    fun printQr() {
+        val bitmap = qrBitmap ?: return
+        val printHelper = androidx.print.PrintHelper(context)
+        printHelper.scaleMode = androidx.print.PrintHelper.SCALE_MODE_FIT
+        printHelper.printBitmap(context.getString(R.string.hive_qr_title), bitmap)
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -614,6 +638,26 @@ private fun HiveQrDialog(
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { shareQr() },
+                        enabled = qrBitmap != null,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                    ) {
+                        Text(stringResource(R.string.hive_qr_share))
+                    }
+                    OutlinedButton(
+                        onClick = { printQr() },
+                        enabled = qrBitmap != null,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                    ) {
+                        Text(stringResource(R.string.hive_qr_print))
+                    }
+                }
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier

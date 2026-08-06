@@ -13,6 +13,7 @@ junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
 zxing = "3.5.4"
+legacySupportPrint = "1.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -38,6 +39,7 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+androidx-print = { group = "androidx.print", name = "print", version.ref = "legacySupportPrint" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
