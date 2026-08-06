@@ -63,6 +63,43 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Сохраняет экспорт прямо в выбранное пользователем место
+     * (системный диалог «Сохранить», обычно Downloads) через SAF.
+     */
+    fun save(uri: Uri) {
+        _uiState.value = _uiState.value.copy(exporting = true)
+        viewModelScope.launch {
+            try {
+                val sf = syncRepository.export()
+                val json = SyncSerializer.encode(sf)
+                val ok = try {
+                    getApplication<Application>().contentResolver.openOutputStream(uri)?.use { out ->
+                        out.write(json.toByteArray(Charsets.UTF_8))
+                    } != null
+                } catch (_: Exception) {
+                    false
+                }
+                if (ok) {
+                    _uiState.value = _uiState.value.copy(
+                        exporting = false,
+                        message = SyncMessage.Error("Пасека сохранена на устройство.")
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        exporting = false,
+                        message = SyncMessage.Error("Не удалось сохранить файл.")
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    exporting = false,
+                    message = SyncMessage.Error("Не удалось сохранить файл: ${e.message}")
+                )
+            }
+        }
+    }
+
     fun startImport(uri: Uri) {
         _uiState.value = _uiState.value.copy(importing = true)
         viewModelScope.launch {

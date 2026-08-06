@@ -60,6 +60,12 @@ fun SyncScreen(
         uri?.let { viewModel.startImport(it) }
     }
 
+    val saveLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let { viewModel.save(it) }
+    }
+
     LaunchedEffect(state.message) {
         val msg = state.message
         if (msg != null) {
@@ -129,6 +135,18 @@ fun SyncScreen(
                         Text(
                             if (state.exporting) stringResource(R.string.sync_working)
                             else stringResource(R.string.sync_export_button)
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            saveLauncher.launch("apiary-backup.json")
+                        },
+                        enabled = !state.exporting && !state.importing,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            if (state.exporting) stringResource(R.string.sync_working)
+                            else stringResource(R.string.sync_save_button)
                         )
                     }
                 }

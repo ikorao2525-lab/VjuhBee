@@ -138,6 +138,7 @@
     <string name="sync_export_title">Экспорт пасеки</string>
     <string name="sync_export_desc">Сохраняет в файл все ульи, осмотры, обработки и календарь.</string>
     <string name="sync_export_button">Экспортировать и отправить</string>
+    <string name="sync_save_button">Сохранить на устройство</string>
     <string name="sync_working">Работаю…</string>
     <string name="sync_import_title">Импорт пасеки</string>
     <string name="sync_import_desc">Выберите файл пасеки. Данные объединятся с текущими, при совпадениях вы решаете, что оставить.</string>

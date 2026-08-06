@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -129,9 +128,8 @@ fun BeeCalcNavHost() {
                             label = {
                                 Text(
                                     text = stringResource(tab.labelRes),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1
                                 )
                             }
                         )
