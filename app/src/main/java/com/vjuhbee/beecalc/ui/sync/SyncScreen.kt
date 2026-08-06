@@ -88,15 +88,34 @@ fun SyncScreen(
         }
     }
 
+    val isInImportFlow = state.step != ImportStep.Pending
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.sync_title)) },
+                title = {
+                    Text(
+                        stringResource(
+                            if (isInImportFlow) R.string.sync_import_title
+                            else R.string.sync_title
+                        )
+                    )
+                },
                 navigationIcon = {
                     OutlinedButton(
-                        onClick = onBack,
+                        onClick = {
+                            if (isInImportFlow) viewModel.reset()
+                            else onBack()
+                        },
                         modifier = Modifier.padding(start = 4.dp)
-                    ) { Text(stringResource(R.string.sync_back)) }
+                    ) {
+                        Text(
+                            stringResource(
+                                if (isInImportFlow) R.string.sync_cancel
+                                else R.string.sync_back
+                            )
+                        )
+                    }
                 }
             )
         },
@@ -110,100 +129,102 @@ fun SyncScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = stringResource(R.string.sync_description),
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            // Экспорт
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = stringResource(R.string.sync_export_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+            if (isInImportFlow) {
+                // Мастер-шаги — на весь экран в режиме импорта
+                when (val step = state.step) {
+                    is ImportStep.Summary -> SummaryContent(
+                        plan = step.plan,
+                        onProceed = { viewModel.proceedToResolve() },
+                        onCancel = { viewModel.reset() }
                     )
-                    Text(
-                        text = stringResource(R.string.sync_export_desc),
-                        style = MaterialTheme.typography.bodyMedium
+                    is ImportStep.Resolving -> {
+                        val conflict = viewModel.currentConflict()
+                        if (conflict != null) {
+                            ConflictContent(
+                                conflict = conflict,
+                                index = step.plan.hiveConflicts.indexOf(conflict) + 1,
+                                total = step.plan.hiveConflicts.size,
+                                onChooseLocal = { viewModel.chooseConflict(false) },
+                                onChooseRemote = { viewModel.chooseConflict(true) },
+                                onSkip = { viewModel.chooseConflict(null) }
+                            )
+                        }
+                    }
+                    is ImportStep.Done -> DoneContent(
+                        count = state.importedCount,
+                        onBack = { viewModel.reset() }
                     )
-                    Button(
-                        onClick = { viewModel.export() },
-                        enabled = !state.exporting && !state.importing,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            if (state.exporting) stringResource(R.string.sync_working)
-                            else stringResource(R.string.sync_export_button)
-                        )
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            saveLauncher.launch("apiary-backup.json")
-                        },
-                        enabled = !state.exporting && !state.importing,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            if (state.exporting) stringResource(R.string.sync_working)
-                            else stringResource(R.string.sync_save_button)
-                        )
-                    }
+                    else -> {}
                 }
-            }
-
-            // Импорт
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = stringResource(R.string.sync_import_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = stringResource(R.string.sync_import_desc),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Button(
-                        onClick = {
-                            importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
-                        },
-                        enabled = !state.importing && !state.exporting,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            if (state.importing) stringResource(R.string.sync_working)
-                            else stringResource(R.string.sync_import_button)
-                        )
-                    }
-                }
-            }
-
-            // Мастер-шаги
-            when (val step = state.step) {
-                is ImportStep.Summary -> SummaryContent(
-                    plan = step.plan,
-                    onProceed = { viewModel.proceedToResolve() },
-                    onCancel = { viewModel.reset() }
+            } else {
+                Text(
+                    text = stringResource(R.string.sync_description),
+                    style = MaterialTheme.typography.bodyMedium
                 )
-                is ImportStep.Resolving -> {
-                    val conflict = viewModel.currentConflict()
-                    if (conflict != null) {
-                        ConflictContent(
-                            conflict = conflict,
-                            index = step.plan.hiveConflicts.indexOf(conflict) + 1,
-                            total = step.plan.hiveConflicts.size,
-                            onChooseLocal = { viewModel.chooseConflict(false) },
-                            onChooseRemote = { viewModel.chooseConflict(true) },
-                            onSkip = { viewModel.chooseConflict(null) }
+
+                // Экспорт
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringResource(R.string.sync_export_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
+                        Text(
+                            text = stringResource(R.string.sync_export_desc),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Button(
+                            onClick = { viewModel.export() },
+                            enabled = !state.exporting && !state.importing,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                if (state.exporting) stringResource(R.string.sync_working)
+                                else stringResource(R.string.sync_export_button)
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                saveLauncher.launch("apiary-backup.json")
+                            },
+                            enabled = !state.exporting && !state.importing,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                if (state.exporting) stringResource(R.string.sync_working)
+                                else stringResource(R.string.sync_save_button)
+                            )
+                        }
                     }
                 }
-                is ImportStep.Done -> DoneContent(
-                    count = state.importedCount,
-                    onBack = { viewModel.reset() }
-                )
-                else -> {}
+
+                // Импорт
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringResource(R.string.sync_import_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = stringResource(R.string.sync_import_desc),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Button(
+                            onClick = {
+                                importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+                            },
+                            enabled = !state.importing && !state.exporting,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                if (state.importing) stringResource(R.string.sync_working)
+                                else stringResource(R.string.sync_import_button)
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
