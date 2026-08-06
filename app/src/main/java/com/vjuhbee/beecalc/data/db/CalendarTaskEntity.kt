@@ -1,6 +1,7 @@
 package com.vjuhbee.beecalc.data.db
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.vjuhbee.beecalc.model.CalendarTask
 import com.vjuhbee.beecalc.model.Importance
@@ -10,7 +11,10 @@ import com.vjuhbee.beecalc.model.TaskCategory
  * Строка таблицы календаря. Enum-ы храним текстом (имя константы),
  * теги — одной строкой через запятую: без конвертеров и лишней магии.
  */
-@Entity(tableName = "calendar_tasks")
+@Entity(
+    tableName = "calendar_tasks",
+    indices = [Index(value = ["uuid"], unique = true)]
+)
 data class CalendarTaskEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val year: Int,
