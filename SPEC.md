@@ -82,6 +82,8 @@
 - ZXing core 3.5.4 — генерация и декодирование штрих-кодов/QR, офлайн,
   без Google-сервисов (SPEC.md §9, v0.4).
 - androidx.print 1.1.0 — системный диалог печати QR (SPEC.md §9, v0.4).
+- CameraX 1.6.1 (core/camera2/lifecycle/view) — сканирование QR камерой
+  (SPEC.md §9, v0.4), офлайн; декодирование — уже имеющийся ZXing Core.
 
 ### Сборка
 - Android Gradle Plugin 9.3.1 (Kotlin-поддержка встроена, отдельный kotlin-android плагин не нужен).
@@ -543,8 +545,9 @@ CloudTips подключён: `https://pay.cloudtips.ru/p/99472576` (TIPS_URL в
   «Показать QR» + диалог).
 - [x] «Поделиться» (Intent.ACTION_SEND, PNG через FileProvider)
   и «Печать» (androidx.print.PrintHelper) в диалоге QR.
-- [ ] Сканирование камерой (zxing-android-embedded, без Google-сервисов) →
-  открывается экран улья. Первое разрешение приложения: камера.
+- [x] Сканирование камерой (CameraX 1.6.1 + ZXing Core, без Google-сервисов):
+  экран QrScannerScreen, кнопка «Сканировать» на вкладке «Ульи»,
+  QR `beecalc://hive/<uuid>` открывает экран улья. Первое разрешение — камера.
 - [x] Рекомендация в UI: наклейка от 5×5 см, матовая ламинация
   (текст-подсказка в диалоге QR).
 
@@ -725,3 +728,8 @@ adb shell monkey -p com.vjuhbee.beecalc -c android.intent.category.LAUNCHER 1
 - **v0.3.4** (ветка `beta`) — в диалоге QR кнопки «Поделиться»
   (Intent.ACTION_SEND, PNG через FileProvider, `res/xml/file_paths.xml`)
   и «Печать» (androidx.print 1.1.0).
+- **v0.3.5** (ветка `beta`) — **сканирование QR камерой** (CameraX 1.6.1 +
+  ZXing Core, офлайн): экран QrScannerScreen с PreviewView и ImageAnalysis,
+  runtime-запрос разрешения камеры, кнопка «Сканировать» на вкладке «Ульи»;
+  QR `beecalc://hive/<uuid>` открывает экран улья по uuid 
+  (HiveDao.findHiveByUuid).

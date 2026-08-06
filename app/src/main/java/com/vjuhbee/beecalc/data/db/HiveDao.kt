@@ -16,6 +16,9 @@ interface HiveDao {
     @Query("SELECT * FROM hives WHERE id = :id")
     fun observeHive(id: Int): Flow<HiveEntity?>
 
+    @Query("SELECT * FROM hives WHERE uuid = :uuid LIMIT 1")
+    suspend fun findHiveByUuid(uuid: String): HiveEntity?
+
     @Insert
     suspend fun insertHive(hive: HiveEntity)
 

@@ -17,8 +17,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
@@ -32,6 +34,8 @@ import com.vjuhbee.beecalc.ui.calculator.CalculatorScreen
 import com.vjuhbee.beecalc.ui.calendar.CalendarScreen
 import com.vjuhbee.beecalc.ui.hives.HiveDetailScreen
 import com.vjuhbee.beecalc.ui.hives.HivesScreen
+import com.vjuhbee.beecalc.ui.hives.QrScannerScreen
+import kotlinx.coroutines.launch
 
 /** Три вкладки нижней навигации (SPEC.md §5). */
 private data class BottomTab(
@@ -50,10 +54,15 @@ private val tabs = listOf(
 @Composable
 fun BeeCalcNavHost() {
     val navController = rememberNavController()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val hiveRepository = (context.applicationContext as BeeCalcApp).hiveRepository
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = currentRoute != "about"
-    val showTopBar = currentRoute != "about" && currentRoute?.startsWith("hive/") != true
+    val showBottomBar = currentRoute != "about" && currentRoute != "qr-scan"
+    val showTopBar = currentRoute != "about" &&
+        currentRoute?.startsWith("hive/") != true &&
+        currentRoute != "qr-scan"
 
     Scaffold(
         topBar = {
@@ -121,7 +130,28 @@ fun BeeCalcNavHost() {
             composable("calculator") { CalculatorScreen() }
             composable("calendar") { CalendarScreen() }
             composable("hives") {
-                HivesScreen(onHiveClick = { hiveId -> navController.navigate("hive/$hiveId") })
+                HivesScreen(
+                    onHiveClick = { hiveId -> navController.navigate("hive/$hiveId") },
+                    onScanClick = { navController.navigate("qr-scan") }
+                )
+            }
+            composable("qr-scan") {
+                QrScannerScreen(
+                    onBack = { navController.popBackStack() },
+                    onQrScanned = { raw ->
+                        scope.launch {
+                            // QR содержит beecalc://hive/<uuid> → открываем улей по uuid.
+                            val uuid = raw.substringAfterLast('/')
+                            val hive = hiveRepository.findHiveByUuid(uuid)
+                            if (hive != null) {
+                                navController.popBackStack()
+                                navController.navigate("hive/${hive.id}")
+                            } else {
+                                navController.popBackStack()
+                            }
+                        }
+                    }
+                )
             }
             composable(
                 route = "hive/{hiveId}",

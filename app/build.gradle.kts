@@ -88,6 +88,11 @@ dependencies {
     implementation(libs.zxing.core)
     // Печать QR-кода (SPEC.md §9, v0.4): системный диалог печати.
     implementation(libs.androidx.print)
+    // Сканирование QR камерой (SPEC.md §9, v0.4): CameraX + ZXing, офлайн.
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

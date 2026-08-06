@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.map
 interface HiveRepository {
     fun observeHives(): Flow<List<Hive>>
     fun observeHive(id: Int): Flow<Hive?>
+    /** Найти улей по постоянному uuid (для открытия по QR, SPEC.md §9 v0.4). */
+    suspend fun findHiveByUuid(uuid: String): Hive?
     suspend fun addHive(hive: Hive)
     suspend fun updateHive(hive: Hive)
 
@@ -35,6 +37,9 @@ class RoomHiveRepository(private val dao: HiveDao) : HiveRepository {
 
     override fun observeHive(id: Int): Flow<Hive?> =
         dao.observeHive(id).map { it?.toModel() }
+
+    override suspend fun findHiveByUuid(uuid: String): Hive? =
+        dao.findHiveByUuid(uuid)?.toModel()
 
     override suspend fun addHive(hive: Hive) = dao.insertHive(hive.toEntity())
 

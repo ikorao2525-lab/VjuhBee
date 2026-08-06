@@ -7,6 +7,11 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
+import com.google.zxing.MultiFormatReader
+import com.google.zxing.RGBLuminanceSource
+import com.google.zxing.BinaryBitmap
+import com.google.zxing.DecodeHintType
+import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import java.io.File
@@ -54,4 +59,29 @@ fun saveQrToCache(context: Context, bitmap: Bitmap, fileName: String): Uri {
     }
     val authority = context.packageName + ".fileprovider"
     return FileProvider.getUriForFile(context, authority, file)
+}
+
+/** Набор типов, которые сканер готов распознавать (только QR, SPEC.md §9 v0.4). */
+private val DECODE_HINTS: Map<DecodeHintType, Any> =
+    mapOf(DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE))
+
+/**
+ * Декодирует QR-код из [bitmap]. Возвращает строковое содержимое
+ * (ожидается `beecalc://hive/<uuid>`) или null, если код не распознан.
+ * Используется в [Analyzer][com.vjuhbee.beecalc.ui.hives.QrAnalyzer].
+ */
+fun decodeQr(bitmap: Bitmap): String? {
+    val width = bitmap.width
+    val height = bitmap.height
+    val pixels = IntArray(width * height)
+    bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+    val source = RGBLuminanceSource(width, height, pixels)
+    val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
+    return try {
+        MultiFormatReader().apply { setHints(DECODE_HINTS) }
+            .decode(binaryBitmap)
+            .text
+    } catch (_: Exception) {
+        null
+    }
 }
