@@ -55,6 +55,7 @@ import com.vjuhbee.beecalc.R
 import com.vjuhbee.beecalc.model.Inspection
 import com.vjuhbee.beecalc.model.Treatment
 import com.vjuhbee.beecalc.model.Hive
+import com.vjuhbee.beecalc.utils.createHiveQrPoster
 import com.vjuhbee.beecalc.utils.formatDate
 import com.vjuhbee.beecalc.utils.generateHiveQr
 import com.vjuhbee.beecalc.utils.saveQrToCache
@@ -587,8 +588,9 @@ private fun HiveQrDialog(
     }
 
     fun shareQr() {
-        val bitmap = qrBitmap ?: return
-        val uri = saveQrToCache(context, bitmap, "hive_${hive.uuid}.png")
+        // Постер (QR + название + заметка), а не голый QR.
+        val poster = createHiveQrPoster(hive.uuid, hive.name, hive.note)
+        val uri = saveQrToCache(context, poster, "hive_${hive.uuid}.png")
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "image/png"
             putExtra(Intent.EXTRA_STREAM, uri)
@@ -600,10 +602,11 @@ private fun HiveQrDialog(
     }
 
     fun printQr() {
-        val bitmap = qrBitmap ?: return
+        // Печатаем постер с подписью, а не голый QR.
+        val poster = createHiveQrPoster(hive.uuid, hive.name, hive.note)
         val printHelper = androidx.print.PrintHelper(context)
         printHelper.scaleMode = androidx.print.PrintHelper.SCALE_MODE_FIT
-        printHelper.printBitmap(context.getString(R.string.hive_qr_title), bitmap)
+        printHelper.printBitmap(context.getString(R.string.hive_qr_title), poster)
     }
 
     Dialog(onDismissRequest = onDismiss) {

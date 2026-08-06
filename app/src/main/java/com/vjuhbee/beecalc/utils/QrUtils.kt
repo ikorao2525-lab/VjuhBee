@@ -52,6 +52,95 @@ fun generateHiveQr(
 }
 
 /**
+ * Компонует QR-код улья с подписью (название, заметка) в единый Bitmap.
+ * Используется для «Поделиться» и «Печать», чтобы на наклейке/файле был
+ * не только QR, но и текст (SPEC.md §9). Обязательно белый фон.
+ */
+fun createHiveQrPoster(
+    uuid: String,
+    name: String,
+    note: String,
+    qrSizePx: Int = 900
+): Bitmap {
+    val qr = generateHiveQr(uuid, name, note, qrSizePx)
+
+    val padding = (qrSizePx * 0.05f).toInt()
+    val maxTextWidth = (qrSizePx - padding * 2).toFloat()
+
+    val titlePaint = android.graphics.Paint(
+        android.graphics.Paint.ANTI_ALIAS_FLAG
+    ).apply {
+        color = Color.BLACK
+        textAlign = android.graphics.Paint.Align.CENTER
+        isFakeBoldText = true
+        textSize = qrSizePx / 16f
+    }
+    val notePaint = android.graphics.Paint(
+        android.graphics.Paint.ANTI_ALIAS_FLAG
+    ).apply {
+        color = Color.BLACK
+        textAlign = android.graphics.Paint.Align.CENTER
+        textSize = qrSizePx / 26f
+    }
+
+    val noteLines = if (note.isNotBlank()) wrapText(note.take(140), notePaint, maxTextWidth) else emptyList()
+    val titleHeight = if (name.isNotBlank()) (titlePaint.textSize * 1.5f).toInt() else 0
+    val noteBlockHeight = noteLines.size * (notePaint.textSize * 1.4f).toInt()
+
+    val height = qrSizePx + padding + titleHeight + noteBlockHeight + padding
+
+    val bitmap = Bitmap.createBitmap(qrSizePx, height, Bitmap.Config.ARGB_8888)
+    bitmap.eraseColor(Color.WHITE)
+    val canvas = android.graphics.Canvas(bitmap)
+    canvas.drawBitmap(qr, 0f, 0f, null)
+    qr.recycle()
+
+    var y = qrSizePx + padding
+    if (name.isNotBlank()) {
+        canvas.drawText(name, qrSizePx / 2f, y + titlePaint.textSize, titlePaint)
+        y += titleHeight
+    }
+    noteLines.forEach { line ->
+        canvas.drawText(line, qrSizePx / 2f, y + notePaint.textSize, notePaint)
+        y += (notePaint.textSize * 1.4f).toInt()
+    }
+    return bitmap
+}
+
+/** Переносит текст на несколько строк по ширине (т.к. Android-строчка не переносится сам). */
+private fun wrapText(text: String, paint: android.graphics.Paint, maxWidth: Float): List<String> {
+    if (text.isBlank()) return emptyList()
+    val words = text.split(" ")
+    val lines = mutableListOf<String>()
+    var line = ""
+    for (word in words) {
+        val candidate = if (line.isEmpty()) word else "$line $word"
+        if (paint.measureText(candidate) <= maxWidth) {
+            line = candidate
+        } else {
+            if (line.isNotEmpty()) {
+                lines.add(line)
+                line = word
+            } else {
+                // Одно длинное слово — режем посимвольно.
+                var sub = ""
+                for (ch in word) {
+                    val k = sub + ch
+                    if (paint.measureText(k) <= maxWidth) sub = k
+                    else {
+                        if (sub.isNotEmpty()) lines.add(sub)
+                        sub = ch.toString()
+                    }
+                }
+                line = sub
+            }
+        }
+    }
+    if (line.isNotEmpty()) lines.add(line)
+    return lines
+}
+
+/**
  * Данные улья, извлечённые из QR (SPEC.md §9, v0.4).
  * `uuid` — обязательный, `name`/`note` — опциональные и могут быть пустыми.
  */

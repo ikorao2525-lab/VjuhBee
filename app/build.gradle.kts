@@ -14,8 +14,8 @@ android {
         applicationId = "com.vjuhbee.beecalc"
         minSdk = 28
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.3.1"
+        versionCode = 8
+        versionName = "0.3.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
