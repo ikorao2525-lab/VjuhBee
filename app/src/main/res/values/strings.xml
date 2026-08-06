@@ -7,6 +7,7 @@
     <string name="tab_calculator">Сироп</string>
     <string name="tab_calendar">Календарь</string>
     <string name="tab_hives">Ульи</string>
+    <string name="tab_tools">Инструменты</string>
 
     <!-- Калькулятор -->
     <string name="calc_volume_label">Объём сиропа: %1$d л</string>
@@ -158,6 +159,13 @@
     <string name="sync_done">Готово. Импортировано/обновлено записей: %1$d</string>
     <string name="sync_done_ok">ОК</string>
     <string name="hives_sync_button">Синхронизация</string>
+
+    <!-- Инструменты: быстрый доступ к QR и синхронизации (SPEC.md §5) -->
+    <string name="tools_title">Инструменты</string>
+    <string name="tools_qr_title">Сканировать QR</string>
+    <string name="tools_qr_desc">Навести камеру на QR-код улья</string>
+    <string name="tools_sync_title">Синхронизация</string>
+    <string name="tools_sync_desc">Перенос пасеки между телефонами</string>
 
     <!-- О приложении / чаевые (v0.3.1) -->
     <string name="about_title">О приложении</string>

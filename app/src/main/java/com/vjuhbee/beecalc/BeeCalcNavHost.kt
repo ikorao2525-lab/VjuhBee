@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Hive
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,6 +42,7 @@ import com.vjuhbee.beecalc.ui.hives.HiveDetailScreen
 import com.vjuhbee.beecalc.ui.hives.HivesScreen
 import com.vjuhbee.beecalc.ui.hives.QrScannerScreen
 import com.vjuhbee.beecalc.ui.sync.SyncScreen
+import com.vjuhbee.beecalc.ui.tools.ToolsScreen
 import com.vjuhbee.beecalc.model.Hive
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vjuhbee.beecalc.utils.parseHiveQr
@@ -57,7 +59,8 @@ private data class BottomTab(
 private val tabs = listOf(
     BottomTab("calculator", R.string.tab_calculator, Icons.Filled.Calculate),
     BottomTab("calendar", R.string.tab_calendar, Icons.Filled.CalendarMonth),
-    BottomTab("hives", R.string.tab_hives, Icons.Filled.Hive)
+    BottomTab("hives", R.string.tab_hives, Icons.Filled.Hive),
+    BottomTab("tools", R.string.tab_tools, Icons.Filled.Build)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -143,7 +146,11 @@ fun BeeCalcNavHost() {
             composable("calendar") { CalendarScreen() }
             composable("hives") {
                 HivesScreen(
-                    onHiveClick = { hiveId -> navController.navigate("hive/$hiveId") },
+                    onHiveClick = { hiveId -> navController.navigate("hive/$hiveId") }
+                )
+            }
+            composable("tools") {
+                ToolsScreen(
                     onScanClick = { navController.navigate("qr-scan") },
                     onSyncClick = { navController.navigate("sync") }
                 )
