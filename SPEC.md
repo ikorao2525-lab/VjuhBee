@@ -541,8 +541,8 @@ CloudTips подключён: `https://pay.cloudtips.ru/p/99472576` (TIPS_URL в
 - [x] Постоянный UUID у каждого улья (не внутренний id базы —
   переживает перенос на новый телефон; миграция базы v5→v6).
 - [x] Генерация QR (ZXing Core 3.5.4, офлайн) — `utils/QrUtils.kt`,
-  кодирует `beecalc://hive/<uuid>`, показ на экране улья (кнопка
-  «Показать QR» + диалог).
+  кодирует `beecalc://hive/<uuid>[?name=|note=]`, показ на экране улья
+  (кнопка «Показать QR» + диалог с подписью названия/заметки).
 - [x] «Поделиться» (Intent.ACTION_SEND, PNG через FileProvider)
   и «Печать» (androidx.print.PrintHelper) в диалоге QR.
 - [x] Сканирование камерой (CameraX 1.6.1 + ZXing Core, без Google-сервисов):
@@ -733,3 +733,7 @@ adb shell monkey -p com.vjuhbee.beecalc -c android.intent.category.LAUNCHER 1
   runtime-запрос разрешения камеры, кнопка «Сканировать» на вкладке «Ульи»;
   QR `beecalc://hive/<uuid>` открывает экран улья по uuid 
   (HiveDao.findHiveByUuid).
+- **v0.3.6** (ветка `beta`) — расширение схемы QR до
+  `beecalc://hive/<uuid>[?name=|note=]` (URL-encoded) и подпись под QR в
+  диалоге: название улья + заметка (одна строка с «…»). Импорт по QR
+  планируется в v0.4.

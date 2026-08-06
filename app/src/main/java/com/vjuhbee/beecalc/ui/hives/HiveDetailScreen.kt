@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -581,8 +582,8 @@ private fun HiveQrDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val qrBitmap: Bitmap? = remember(hive.uuid) {
-        if (hive.uuid.isBlank()) null else generateHiveQr(hive.uuid)
+    val qrBitmap: Bitmap? = remember(hive.uuid, hive.name, hive.note) {
+        if (hive.uuid.isBlank()) null else generateHiveQr(hive.uuid, hive.name, hive.note)
     }
 
     fun shareQr() {
@@ -632,6 +633,24 @@ private fun HiveQrDialog(
                         text = hive.uuid,
                         style = MaterialTheme.typography.bodyMedium
                     )
+                }
+                // Подпись под QR: название и (обрезанная) заметка (SPEC.md §9).
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = hive.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    if (hive.note.isNotBlank()) {
+                        Text(
+                            text = hive.note,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
                 Text(
                     text = stringResource(R.string.hive_qr_hint),

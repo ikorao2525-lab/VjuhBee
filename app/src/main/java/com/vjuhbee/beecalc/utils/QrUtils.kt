@@ -18,19 +18,24 @@ import java.io.File
 import java.io.FileOutputStream
 
 /**
- * Генерация QR-кода улья из его uuid (SPEC.md §9, v0.4).
- * Кодируем как URI-схему `beecalc://hive/<uuid>`, чтобы скан
- * открывал приложение и вёл прямо на улей.
- *
- * Чистая функция без UI — её легко тестировать отдельно.
+ * Генерация QR-кода улья (SPEC.md §9, v0.4).
+ * Кодируем как URI-схему `beecalc://hive/<uuid>` (+ `name`/`note`),
+ * чтобы скан открывал приложение, вёл прямо на улей по uuid
+ * и позволял импортировать улей с названием/заметкой на другом
+ * телефоне (без неё — только uuid).
  */
-fun generateHiveQr(uuid: String, sizePx: Int = 512): Bitmap {
+fun generateHiveQr(
+    uuid: String,
+    name: String = "",
+    note: String = "",
+    sizePx: Int = 512
+): Bitmap {
     val hints = mapOf(
         EncodeHintType.CHARACTER_SET to "UTF-8",
         EncodeHintType.MARGIN to 1,
         EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.M
     )
-    val content = "beecalc://hive/$uuid"
+    val content = buildHiveQrContent(uuid, name, note)
     val matrix = QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, sizePx, sizePx, hints)
 
     val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
@@ -44,6 +49,60 @@ fun generateHiveQr(uuid: String, sizePx: Int = 512): Bitmap {
         }
     }
     return bitmap
+}
+
+/**
+ * Данные улья, извлечённые из QR (SPEC.md §9, v0.4).
+ * `uuid` — обязательный, `name`/`note` — опциональные и могут быть пустыми.
+ */
+data class QrHiveData(
+    val uuid: String,
+    val name: String = "",
+    val note: String = ""
+)
+
+/** Формирует содержимое QR: `beecalc://hive/<uuid>[?name=..&note=..]`. */
+fun buildHiveQrContent(uuid: String, name: String, note: String): String {
+    val sb = StringBuilder("beecalc://hive/$uuid")
+    val params = mutableListOf<String>()
+    if (name.isNotBlank()) params.add("name=" + java.net.URLEncoder.encode(name, "UTF-8"))
+    if (note.isNotBlank()) params.add("note=" + java.net.URLEncoder.encode(note, "UTF-8"))
+    if (params.isNotEmpty()) sb.append('?').append(params.joinToString("&"))
+    return sb.toString()
+}
+
+/**
+ * Разбирает содержимое QR-кода улья. Возвращает [QrHiveData] с uuid
+ * и (если были) название/заметкой. Умеет и старый формат без query.
+ */
+fun parseHiveQr(text: String): QrHiveData? {
+    if (!text.startsWith("beecalc://hive/")) return null
+    val rest = text.removePrefix("beecalc://hive/")
+    val questionIdx = rest.indexOf('?')
+    val uuid = if (questionIdx >= 0) rest.substring(0, questionIdx) else rest
+    if (uuid.isBlank()) return null
+
+    var name = ""
+    var note = ""
+    if (questionIdx >= 0) {
+        val query = rest.substring(questionIdx + 1)
+        for (pair in query.split('&')) {
+            val eq = pair.indexOf('=')
+            if (eq <= 0) continue
+            val key = pair.substring(0, eq)
+            val raw = pair.substring(eq + 1)
+            val value = try {
+                java.net.URLDecoder.decode(raw, "UTF-8")
+            } catch (_: Exception) {
+                raw
+            }
+            when (key) {
+                "name" -> name = value
+                "note" -> note = value
+            }
+        }
+    }
+    return QrHiveData(uuid = uuid, name = name, note = note)
 }
 
 /**

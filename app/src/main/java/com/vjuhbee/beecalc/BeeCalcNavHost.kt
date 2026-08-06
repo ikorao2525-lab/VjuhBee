@@ -35,6 +35,7 @@ import com.vjuhbee.beecalc.ui.calendar.CalendarScreen
 import com.vjuhbee.beecalc.ui.hives.HiveDetailScreen
 import com.vjuhbee.beecalc.ui.hives.HivesScreen
 import com.vjuhbee.beecalc.ui.hives.QrScannerScreen
+import com.vjuhbee.beecalc.utils.parseHiveQr
 import kotlinx.coroutines.launch
 
 /** Три вкладки нижней навигации (SPEC.md §5). */
@@ -140,9 +141,9 @@ fun BeeCalcNavHost() {
                     onBack = { navController.popBackStack() },
                     onQrScanned = { raw ->
                         scope.launch {
-                            // QR содержит beecalc://hive/<uuid> → открываем улей по uuid.
-                            val uuid = raw.substringAfterLast('/')
-                            val hive = hiveRepository.findHiveByUuid(uuid)
+                            // QR содержит beecalc://hive/<uuid>[?name=|note=] → открываем улей по uuid.
+                            val data = parseHiveQr(raw)
+                            val hive = data?.let { hiveRepository.findHiveByUuid(it.uuid) }
                             if (hive != null) {
                                 navController.popBackStack()
                                 navController.navigate("hive/${hive.id}")
