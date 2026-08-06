@@ -14,8 +14,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Hive
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -39,6 +41,7 @@ import com.vjuhbee.beecalc.model.Hive
 @Composable
 fun HivesScreen(
     onHiveClick: (Int) -> Unit,
+    onScanClick: () -> Unit,
     viewModel: HivesViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -49,11 +52,26 @@ fun HivesScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item(key = "title") {
-            Text(
-                text = stringResource(R.string.hives_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.hives_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(onClick = onScanClick) {
+                    Icon(
+                        imageVector = Icons.Filled.QrCodeScanner,
+                        contentDescription = stringResource(R.string.tools_qr_title),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
 
         if (state.hives.isEmpty()) {

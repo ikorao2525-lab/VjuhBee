@@ -140,7 +140,7 @@
     <string name="sync_export_button">Экспортировать и отправить</string>
     <string name="sync_working">Работаю…</string>
     <string name="sync_import_title">Импорт пасеки</string>
-    <string name="sync_import_desc">Выберите файл пасеки. Данные объединятся с текущими (по uuid), при совпадениях вы решаете, что оставить.</string>
+    <string name="sync_import_desc">Выберите файл пасеки. Данные объединятся с текущими, при совпадениях вы решаете, что оставить.</string>
     <string name="sync_import_button">Выбрать файл пасеки</string>
     <string name="sync_summary_title">Что будет импортировано</string>
     <string name="sync_summary_new">Новых записей: %1$d</string>
