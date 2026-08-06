@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Пути во внутреннем кэше, доступные другим приложениям через FileProvider
-     (для «Поделиться» QR-кода, SPEC.md §9 v0.4). -->
+     (для «Поделиться» QR-кода и экспорта пасеки, SPEC.md §9 v0.4). -->
 <paths>
     <cache-path name="shared_qr" path="qr/" />
+    <cache-path name="shared_sync" path="sync/" />
 </paths>

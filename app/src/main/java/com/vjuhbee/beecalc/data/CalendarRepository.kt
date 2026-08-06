@@ -22,6 +22,9 @@ interface CalendarRepository {
     suspend fun addTask(task: CalendarTask)
     suspend fun updateTask(task: CalendarTask)
 
+    /** Все работы (для экспорта/синхронизации пасеки). */
+    suspend fun allTasks(): List<CalendarTask>
+
     /** «Удалить» = отправить в корзину, откуда работу можно вернуть. */
     suspend fun moveToTrash(task: CalendarTask)
     suspend fun restoreFromTrash(task: CalendarTask)
@@ -52,6 +55,9 @@ class RoomCalendarRepository(private val dao: CalendarTaskDao) : CalendarReposit
     override suspend fun updateTask(task: CalendarTask) {
         dao.update(task.toEntity())
     }
+
+    override suspend fun allTasks(): List<CalendarTask> =
+        dao.allTasks().map { it.toModel() }
 
     override suspend fun moveToTrash(task: CalendarTask) {
         dao.update(task.copy(isDeleted = true).toEntity())

@@ -40,6 +40,7 @@ import com.vjuhbee.beecalc.model.Hive
 fun HivesScreen(
     onHiveClick: (Int) -> Unit,
     onScanClick: () -> Unit,
+    onSyncClick: () -> Unit,
     viewModel: HivesViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -94,6 +95,20 @@ fun HivesScreen(
             ) {
                 Text(
                     text = stringResource(R.string.hives_scan_button),
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+        }
+
+        item(key = "sync") {
+            OutlinedButton(
+                onClick = onSyncClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.hives_sync_button),
                     style = MaterialTheme.typography.titleMedium
                 )
             }

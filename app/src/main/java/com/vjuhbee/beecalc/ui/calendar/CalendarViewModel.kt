@@ -132,7 +132,13 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun saveTask(task: CalendarTask, isNew: Boolean) {
         viewModelScope.launch {
-            if (isNew) repository.addTask(task) else repository.updateTask(task)
+            val now = System.currentTimeMillis()
+            val toSave = if (isNew && task.uuid.isBlank()) {
+                task.copy(uuid = java.util.UUID.randomUUID().toString(), updatedAt = now)
+            } else {
+                task.copy(updatedAt = now)
+            }
+            if (isNew) repository.addTask(toSave) else repository.updateTask(toSave)
             editor.value = null
         }
     }
@@ -140,13 +146,15 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     /** «Удалить» отправляет работу в корзину — её можно вернуть. */
     fun deleteTask(task: CalendarTask) {
         viewModelScope.launch {
-            repository.moveToTrash(task)
+            repository.moveToTrash(task.copy(updatedAt = System.currentTimeMillis()))
             editor.value = null
         }
     }
 
     fun restoreTask(task: CalendarTask) {
-        viewModelScope.launch { repository.restoreFromTrash(task) }
+        viewModelScope.launch {
+            repository.restoreFromTrash(task.copy(updatedAt = System.currentTimeMillis()))
+        }
     }
 
     fun deleteForever(task: CalendarTask) {

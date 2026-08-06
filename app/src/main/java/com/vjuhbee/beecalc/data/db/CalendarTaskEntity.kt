@@ -29,7 +29,9 @@ data class CalendarTaskEntity(
     val beeBreadKg: Double?,
     val propolisGrams: Double?,
     val waxKg: Double?,
-    val royalJellyGrams: Double?
+    val royalJellyGrams: Double?,
+    val uuid: String = "",
+    val updatedAt: Long = 0L
 )
 
 fun CalendarTaskEntity.toModel() = CalendarTask(
@@ -50,7 +52,9 @@ fun CalendarTaskEntity.toModel() = CalendarTask(
     beeBreadKg = beeBreadKg,
     propolisGrams = propolisGrams,
     waxKg = waxKg,
-    royalJellyGrams = royalJellyGrams
+    royalJellyGrams = royalJellyGrams,
+    uuid = uuid,
+    updatedAt = updatedAt
 )
 
 fun CalendarTask.toEntity() = CalendarTaskEntity(
@@ -71,5 +75,7 @@ fun CalendarTask.toEntity() = CalendarTaskEntity(
     beeBreadKg = beeBreadKg,
     propolisGrams = propolisGrams,
     waxKg = waxKg,
-    royalJellyGrams = royalJellyGrams
+    royalJellyGrams = royalJellyGrams,
+    uuid = uuid,
+    updatedAt = updatedAt
 )

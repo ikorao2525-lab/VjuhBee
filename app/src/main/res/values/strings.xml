@@ -130,6 +130,35 @@
     <string name="qr_import_confirm">Импортировать</string>
     <string name="qr_import_cancel">Отмена</string>
 
+    <!-- Синхронизация пасеки (v0.4) -->
+    <string name="sync_title">Синхронизация</string>
+    <string name="sync_back">← Назад</string>
+    <string name="sync_description">Перенос пасеки между телефонами без интернета. Экспортируйте данные в файл, отправьте его на другой телефон и импортируйте там.</string>
+    <string name="sync_export_title">Экспорт пасеки</string>
+    <string name="sync_export_desc">Сохраняет в файл все ульи, осмотры, обработки и календарь.</string>
+    <string name="sync_export_button">Экспортировать и отправить</string>
+    <string name="sync_working">Работаю…</string>
+    <string name="sync_import_title">Импорт пасеки</string>
+    <string name="sync_import_desc">Выберите файл пасеки. Данные объединятся с текущими (по uuid), при совпадениях вы решаете, что оставить.</string>
+    <string name="sync_import_button">Выбрать файл пасеки</string>
+    <string name="sync_summary_title">Что будет импортировано</string>
+    <string name="sync_summary_new">Новых записей: %1$d</string>
+    <string name="sync_summary_updated">Изменённых: %1$d</string>
+    <string name="sync_summary_conflicts">Конфликтов (нужно решить): %1$d</string>
+    <string name="sync_warning_lost">Внимание: некоторые данные из файла или с этого телефона могут не попасть в итог, если появятся противоречия. Проверяйте внимательно.</string>
+    <string name="sync_cancel">Отмена</string>
+    <string name="sync_proceed">Дальше</string>
+    <string name="sync_conflict_title">Конфликт %1$d из %2$d</string>
+    <string name="sync_conflict_local_label">На этом телефоне:</string>
+    <string name="sync_conflict_remote_label">В файле:</string>
+    <string name="sync_conflict_updated">Изменено: %1$s</string>
+    <string name="sync_conflict_keep_local">Оставить этот</string>
+    <string name="sync_conflict_take_file">Взять из файла</string>
+    <string name="sync_conflict_skip">Пропустить</string>
+    <string name="sync_done">Готово. Импортировано/обновлено записей: %1$d</string>
+    <string name="sync_done_ok">ОК</string>
+    <string name="hives_sync_button">Синхронизация</string>
+
     <!-- О приложении / чаевые (v0.3.1) -->
     <string name="about_title">О приложении</string>
     <string name="about_beta_badge">Бета-сборка — новые функции раньше всех</string>

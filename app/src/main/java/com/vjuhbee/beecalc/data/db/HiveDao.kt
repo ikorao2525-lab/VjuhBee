@@ -16,6 +16,15 @@ interface HiveDao {
     @Query("SELECT * FROM hives WHERE id = :id")
     fun observeHive(id: Int): Flow<HiveEntity?>
 
+    @Query("SELECT * FROM hives")
+    suspend fun allHives(): List<HiveEntity>
+
+    @Query("SELECT * FROM inspections")
+    suspend fun allInspections(): List<InspectionEntity>
+
+    @Query("SELECT * FROM treatments")
+    suspend fun allTreatments(): List<TreatmentEntity>
+
     @Query("SELECT * FROM hives WHERE uuid = :uuid LIMIT 1")
     suspend fun findHiveByUuid(uuid: String): HiveEntity?
 
@@ -35,6 +44,9 @@ interface HiveDao {
     @Insert
     suspend fun insertInspection(inspection: InspectionEntity)
 
+    @Update
+    suspend fun updateInspection(inspection: InspectionEntity)
+
     @Delete
     suspend fun deleteInspection(inspection: InspectionEntity)
 
@@ -43,6 +55,9 @@ interface HiveDao {
 
     @Insert
     suspend fun insertTreatment(treatment: TreatmentEntity)
+
+    @Update
+    suspend fun updateTreatment(treatment: TreatmentEntity)
 
     @Delete
     suspend fun deleteTreatment(treatment: TreatmentEntity)

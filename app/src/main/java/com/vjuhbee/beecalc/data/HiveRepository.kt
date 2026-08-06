@@ -18,15 +18,22 @@ interface HiveRepository {
     suspend fun addHive(hive: Hive): Long
     suspend fun updateHive(hive: Hive)
 
+    /** Все данные пасеки (для экспорта/синхронизации, SPEC.md §9). */
+    suspend fun allHives(): List<Hive>
+    suspend fun allInspections(): List<Inspection>
+    suspend fun allTreatments(): List<Treatment>
+
     /** Удаляет улей вместе со всей историей (каскад в базе). */
     suspend fun deleteHive(hive: Hive)
 
     fun observeInspections(hiveId: Int): Flow<List<Inspection>>
     suspend fun addInspection(inspection: Inspection)
+    suspend fun updateInspection(inspection: Inspection)
     suspend fun deleteInspection(inspection: Inspection)
 
     fun observeTreatments(hiveId: Int): Flow<List<Treatment>>
     suspend fun addTreatment(treatment: Treatment)
+    suspend fun updateTreatment(treatment: Treatment)
     suspend fun deleteTreatment(treatment: Treatment)
 }
 
@@ -41,6 +48,15 @@ class RoomHiveRepository(private val dao: HiveDao) : HiveRepository {
     override suspend fun findHiveByUuid(uuid: String): Hive? =
         dao.findHiveByUuid(uuid)?.toModel()
 
+    override suspend fun allHives(): List<Hive> =
+        dao.allHives().map { it.toModel() }
+
+    override suspend fun allInspections(): List<Inspection> =
+        dao.allInspections().map { it.toModel() }
+
+    override suspend fun allTreatments(): List<Treatment> =
+        dao.allTreatments().map { it.toModel() }
+
     override suspend fun addHive(hive: Hive): Long = dao.insertHive(hive.toEntity())
 
     override suspend fun updateHive(hive: Hive) = dao.updateHive(hive.toEntity())
@@ -53,6 +69,9 @@ class RoomHiveRepository(private val dao: HiveDao) : HiveRepository {
     override suspend fun addInspection(inspection: Inspection) =
         dao.insertInspection(inspection.toEntity())
 
+    override suspend fun updateInspection(inspection: Inspection) =
+        dao.updateInspection(inspection.toEntity())
+
     override suspend fun deleteInspection(inspection: Inspection) =
         dao.deleteInspection(inspection.toEntity())
 
@@ -61,6 +80,9 @@ class RoomHiveRepository(private val dao: HiveDao) : HiveRepository {
 
     override suspend fun addTreatment(treatment: Treatment) =
         dao.insertTreatment(treatment.toEntity())
+
+    override suspend fun updateTreatment(treatment: Treatment) =
+        dao.updateTreatment(treatment.toEntity())
 
     override suspend fun deleteTreatment(treatment: Treatment) =
         dao.deleteTreatment(treatment.toEntity())

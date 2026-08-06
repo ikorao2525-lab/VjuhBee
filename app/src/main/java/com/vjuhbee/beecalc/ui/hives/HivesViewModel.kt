@@ -51,10 +51,11 @@ class HivesViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             // У нового улья uuid генерируется здесь, а не в модели,
             // чтобы у него был единый источник (SPEC.md §9, v0.4).
+            val now = System.currentTimeMillis()
             val toSave = if (isNew && hive.uuid.isBlank()) {
-                hive.copy(uuid = UUID.randomUUID().toString())
+                hive.copy(uuid = UUID.randomUUID().toString(), updatedAt = now)
             } else {
-                hive
+                hive.copy(updatedAt = now)
             }
             if (isNew) repository.addHive(toSave) else repository.updateHive(toSave)
             editor.value = null

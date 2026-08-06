@@ -6,6 +6,7 @@ import com.vjuhbee.beecalc.data.HiveRepository
 import com.vjuhbee.beecalc.data.RoomCalendarRepository
 import com.vjuhbee.beecalc.data.RoomHiveRepository
 import com.vjuhbee.beecalc.data.db.BeeCalcDatabase
+import com.vjuhbee.beecalc.data.sync.SyncRepository
 
 /**
  * Application-класс: держит единственные экземпляры базы и репозиториев.
@@ -21,5 +22,9 @@ class BeeCalcApp : Application() {
 
     val hiveRepository: HiveRepository by lazy {
         RoomHiveRepository(database.hiveDao())
+    }
+
+    val syncRepository: SyncRepository by lazy {
+        SyncRepository(hiveRepository, calendarRepository)
     }
 }

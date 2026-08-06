@@ -30,6 +30,9 @@ interface CalendarTaskDao {
     @Query("SELECT * FROM calendar_tasks WHERE year = :year AND isDeleted = 0")
     suspend fun activeTasksForYear(year: Int): List<CalendarTaskEntity>
 
+    @Query("SELECT * FROM calendar_tasks")
+    suspend fun allTasks(): List<CalendarTaskEntity>
+
     @Insert
     suspend fun insert(task: CalendarTaskEntity)
 

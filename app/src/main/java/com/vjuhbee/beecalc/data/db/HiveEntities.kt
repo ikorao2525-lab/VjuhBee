@@ -23,7 +23,9 @@ data class HiveEntity(
     val name: String,
     val note: String,
     /** Постоянный публичный id улья (SPEC.md §9, v0.4): QR-коды и перенос базы. */
-    val uuid: String
+    val uuid: String,
+    /** Время последнего изменения (мс). */
+    val updatedAt: Long = 0L
 )
 
 @Entity(
@@ -36,7 +38,10 @@ data class HiveEntity(
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("hiveId")]
+    indices = [
+        Index("hiveId"),
+        Index(value = ["uuid"], unique = true)
+    ]
 )
 data class InspectionEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -45,7 +50,9 @@ data class InspectionEntity(
     val frames: Int,
     val brood: Int,
     val queenSeen: Boolean,
-    val note: String
+    val note: String,
+    val uuid: String = "",
+    val updatedAt: Long = 0L
 )
 
 @Entity(
@@ -58,7 +65,10 @@ data class InspectionEntity(
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("hiveId")]
+    indices = [
+        Index("hiveId"),
+        Index(value = ["uuid"], unique = true)
+    ]
 )
 data class TreatmentEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -66,28 +76,34 @@ data class TreatmentEntity(
     val date: Long,
     val medicine: String,
     val dose: String,
-    val note: String
+    val note: String,
+    val uuid: String = "",
+    val updatedAt: Long = 0L
 )
 
-fun HiveEntity.toModel() = Hive(id = id, name = name, note = note, uuid = uuid)
-fun Hive.toEntity() = HiveEntity(id = id, name = name, note = note, uuid = uuid)
+fun HiveEntity.toModel() = Hive(id = id, name = name, note = note, uuid = uuid, updatedAt = updatedAt)
+fun Hive.toEntity() = HiveEntity(id = id, name = name, note = note, uuid = uuid, updatedAt = updatedAt)
 
 fun InspectionEntity.toModel() = Inspection(
     id = id, hiveId = hiveId, date = date,
-    frames = frames, brood = brood, queenSeen = queenSeen, note = note
+    frames = frames, brood = brood, queenSeen = queenSeen, note = note,
+    uuid = uuid, updatedAt = updatedAt
 )
 
 fun Inspection.toEntity() = InspectionEntity(
     id = id, hiveId = hiveId, date = date,
-    frames = frames, brood = brood, queenSeen = queenSeen, note = note
+    frames = frames, brood = brood, queenSeen = queenSeen, note = note,
+    uuid = uuid, updatedAt = updatedAt
 )
 
 fun TreatmentEntity.toModel() = Treatment(
     id = id, hiveId = hiveId, date = date,
-    medicine = medicine, dose = dose, note = note
+    medicine = medicine, dose = dose, note = note,
+    uuid = uuid, updatedAt = updatedAt
 )
 
 fun Treatment.toEntity() = TreatmentEntity(
     id = id, hiveId = hiveId, date = date,
-    medicine = medicine, dose = dose, note = note
+    medicine = medicine, dose = dose, note = note,
+    uuid = uuid, updatedAt = updatedAt
 )

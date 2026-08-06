@@ -61,7 +61,11 @@ data class CalendarTask(
     val beeBreadKg: Double? = null,        // перга
     val propolisGrams: Double? = null,     // прополис — обычно граммы
     val waxKg: Double? = null,             // воск
-    val royalJellyGrams: Double? = null    // маточное молочко — обычно граммы
+    val royalJellyGrams: Double? = null,   // маточное молочко — обычно граммы
+    /** Стабильный ключ для синхронизации. */
+    val uuid: String = "",
+    /** Время последнего изменения (мс). */
+    val updatedAt: Long = 0L
 )
 
 /**
@@ -92,7 +96,9 @@ data class Hive(
      * Не зависит от внутреннего id базы — переживает перенос базы на
      * другой телефон и используется в QR-кодах улья.
      */
-    val uuid: String = ""
+    val uuid: String = "",
+    /** Время последнего изменения (мс). Нужно для синхронизации. */
+    val updatedAt: Long = 0L
 )
 
 /** Осмотр улья (SPEC.md §7). */
@@ -103,7 +109,11 @@ data class Inspection(
     val frames: Int,      // всего рамок
     val brood: Int,       // рамок с расплодом
     val queenSeen: Boolean,
-    val note: String = ""
+    val note: String = "",
+    /** Стабильный ключ для синхронизации. */
+    val uuid: String = "",
+    /** Время последнего изменения (мс). */
+    val updatedAt: Long = 0L
 )
 
 /** Обработка/лечение улья (SPEC.md §7). */
@@ -113,5 +123,9 @@ data class Treatment(
     val date: Long,       // millis
     val medicine: String,
     val dose: String = "",
-    val note: String = ""
+    val note: String = "",
+    /** Стабильный ключ для синхронизации. */
+    val uuid: String = "",
+    /** Время последнего изменения (мс). */
+    val updatedAt: Long = 0L
 )

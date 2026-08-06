@@ -75,7 +75,7 @@ class HiveDetailViewModel(
 
     fun saveHive(hive: Hive) {
         viewModelScope.launch {
-            repository.updateHive(hive)
+            repository.updateHive(hive.copy(updatedAt = System.currentTimeMillis()))
             dialog.value = null
         }
     }
@@ -89,7 +89,14 @@ class HiveDetailViewModel(
 
     fun addInspection(inspection: Inspection) {
         viewModelScope.launch {
-            repository.addInspection(inspection.copy(hiveId = hiveId))
+            val now = System.currentTimeMillis()
+            repository.addInspection(
+                inspection.copy(
+                    hiveId = hiveId,
+                    uuid = if (inspection.uuid.isBlank()) java.util.UUID.randomUUID().toString() else inspection.uuid,
+                    updatedAt = now
+                )
+            )
             dialog.value = null
         }
     }
@@ -100,7 +107,14 @@ class HiveDetailViewModel(
 
     fun addTreatment(treatment: Treatment) {
         viewModelScope.launch {
-            repository.addTreatment(treatment.copy(hiveId = hiveId))
+            val now = System.currentTimeMillis()
+            repository.addTreatment(
+                treatment.copy(
+                    hiveId = hiveId,
+                    uuid = if (treatment.uuid.isBlank()) java.util.UUID.randomUUID().toString() else treatment.uuid,
+                    updatedAt = now
+                )
+            )
             dialog.value = null
         }
     }

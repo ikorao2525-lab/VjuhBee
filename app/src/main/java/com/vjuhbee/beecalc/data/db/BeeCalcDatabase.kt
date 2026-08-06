@@ -20,7 +20,7 @@ import java.util.Calendar
         InspectionEntity::class,
         TreatmentEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class BeeCalcDatabase : RoomDatabase() {
@@ -124,9 +124,68 @@ abstract class BeeCalcDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * v6 → v7: ключи и метки для синхронизации (SPEC.md §9, v0.4).
+         * Каждому синхронизируемому объекту — стабильный uuid (переживает
+         * слияние баз) и updatedAt (для разрешения конфликтов и экспорта).
+         * Существующим строкам генерим UUID v4 на месте и ставим updatedAt = now.
+         */
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                val now = System.currentTimeMillis()
+                db.execSQL("ALTER TABLE hives ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE hives SET updatedAt = $now")
+
+                db.execSQL("ALTER TABLE inspections ADD COLUMN uuid TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE inspections ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    "UPDATE inspections SET uuid = " +
+                        "lower(hex(randomblob(4)) || '-' || " +
+                        "hex(randomblob(2)) || '-' || " +
+                        "'4' || substr(hex(randomblob(2)), 2) || '-' || " +
+                        "substr('89ab', 1 + (abs(random()) % 4), 1) || " +
+                        "substr(hex(randomblob(2)), 2) || '-' || " +
+                        "hex(randomblob(6)))"
+                )
+                db.execSQL("UPDATE inspections SET updatedAt = $now")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_inspections_uuid ON inspections(uuid)")
+
+                db.execSQL("ALTER TABLE treatments ADD COLUMN uuid TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE treatments ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    "UPDATE treatments SET uuid = " +
+                        "lower(hex(randomblob(4)) || '-' || " +
+                        "hex(randomblob(2)) || '-' || " +
+                        "'4' || substr(hex(randomblob(2)), 2) || '-' || " +
+                        "substr('89ab', 1 + (abs(random()) % 4), 1) || " +
+                        "substr(hex(randomblob(2)), 2) || '-' || " +
+                        "hex(randomblob(6)))"
+                )
+                db.execSQL("UPDATE treatments SET updatedAt = $now")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_treatments_uuid ON treatments(uuid)")
+
+                db.execSQL("ALTER TABLE calendar_tasks ADD COLUMN uuid TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE calendar_tasks ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    "UPDATE calendar_tasks SET uuid = " +
+                        "lower(hex(randomblob(4)) || '-' || " +
+                        "hex(randomblob(2)) || '-' || " +
+                        "'4' || substr(hex(randomblob(2)), 2) || '-' || " +
+                        "substr('89ab', 1 + (abs(random()) % 4), 1) || " +
+                        "substr(hex(randomblob(2)), 2) || '-' || " +
+                        "hex(randomblob(6)))"
+                )
+                db.execSQL("UPDATE calendar_tasks SET updatedAt = $now")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_calendar_tasks_uuid ON calendar_tasks(uuid)")
+            }
+        }
+
         fun build(context: Context): BeeCalcDatabase =
             Room.databaseBuilder(context, BeeCalcDatabase::class.java, "beecalc.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                .addMigrations(
+                    MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
+                    MIGRATION_5_6, MIGRATION_6_7
+                )
                 .build()
     }
 }
