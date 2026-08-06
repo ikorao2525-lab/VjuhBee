@@ -20,7 +20,7 @@ interface HiveDao {
     suspend fun findHiveByUuid(uuid: String): HiveEntity?
 
     @Insert
-    suspend fun insertHive(hive: HiveEntity)
+    suspend fun insertHive(hive: HiveEntity): Long
 
     @Update
     suspend fun updateHive(hive: HiveEntity)

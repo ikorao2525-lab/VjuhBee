@@ -15,7 +15,7 @@ interface HiveRepository {
     fun observeHive(id: Int): Flow<Hive?>
     /** Найти улей по постоянному uuid (для открытия по QR, SPEC.md §9 v0.4). */
     suspend fun findHiveByUuid(uuid: String): Hive?
-    suspend fun addHive(hive: Hive)
+    suspend fun addHive(hive: Hive): Long
     suspend fun updateHive(hive: Hive)
 
     /** Удаляет улей вместе со всей историей (каскад в базе). */
@@ -41,7 +41,7 @@ class RoomHiveRepository(private val dao: HiveDao) : HiveRepository {
     override suspend fun findHiveByUuid(uuid: String): Hive? =
         dao.findHiveByUuid(uuid)?.toModel()
 
-    override suspend fun addHive(hive: Hive) = dao.insertHive(hive.toEntity())
+    override suspend fun addHive(hive: Hive): Long = dao.insertHive(hive.toEntity())
 
     override suspend fun updateHive(hive: Hive) = dao.updateHive(hive.toEntity())
 

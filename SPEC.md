@@ -737,3 +737,7 @@ adb shell monkey -p com.vjuhbee.beecalc -c android.intent.category.LAUNCHER 1
   `beecalc://hive/<uuid>[?name=|note=]` (URL-encoded) и подпись под QR в
   диалоге: название улья + заметка (одна строка с «…»). Импорт по QR
   планируется в v0.4.
+- **v0.3.7** (ветка `beta`) — **импорт улья по QR**: при сканировании кода с
+  неизвестным uuid приложение предлагает импортировать улей (название/заметка
+  из QR, сохраняется оригинальный uuid) и открывает его (`HiveDao.insertHive`
+  теперь возвращает id).

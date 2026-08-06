@@ -13,11 +13,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -35,7 +40,9 @@ import com.vjuhbee.beecalc.ui.calendar.CalendarScreen
 import com.vjuhbee.beecalc.ui.hives.HiveDetailScreen
 import com.vjuhbee.beecalc.ui.hives.HivesScreen
 import com.vjuhbee.beecalc.ui.hives.QrScannerScreen
+import com.vjuhbee.beecalc.model.Hive
 import com.vjuhbee.beecalc.utils.parseHiveQr
+import com.vjuhbee.beecalc.utils.QrHiveData
 import kotlinx.coroutines.launch
 
 /** Три вкладки нижней навигации (SPEC.md §5). */
@@ -60,6 +67,7 @@ fun BeeCalcNavHost() {
     val hiveRepository = (context.applicationContext as BeeCalcApp).hiveRepository
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    var pendingImport by remember { mutableStateOf<QrHiveData?>(null) }
     val showBottomBar = currentRoute != "about" && currentRoute != "qr-scan"
     val showTopBar = currentRoute != "about" &&
         currentRoute?.startsWith("hive/") != true &&
@@ -141,12 +149,16 @@ fun BeeCalcNavHost() {
                     onBack = { navController.popBackStack() },
                     onQrScanned = { raw ->
                         scope.launch {
-                            // QR содержит beecalc://hive/<uuid>[?name=|note=] → открываем улей по uuid.
+                            // QR содержит beecalc://hive/<uuid>[?name=|note=].
                             val data = parseHiveQr(raw)
-                            val hive = data?.let { hiveRepository.findHiveByUuid(it.uuid) }
+                            val hive = data?.let { hiveRepository.findHiveByUuid(data.uuid) }
                             if (hive != null) {
+                                // Свой улей — просто открываем его.
                                 navController.popBackStack()
                                 navController.navigate("hive/${hive.id}")
+                            } else if (data != null) {
+                                // Чужой/неизвестный улей — предлагаем импортировать.
+                                pendingImport = data
                             } else {
                                 navController.popBackStack()
                             }
@@ -164,5 +176,48 @@ fun BeeCalcNavHost() {
                 AboutScreen(onBack = { navController.popBackStack() })
             }
         }
+    }
+
+    pendingImport?.let { data ->
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            title = { Text(stringResource(R.string.qr_import_title)) },
+            text = {
+                Text(
+                    text = if (data.name.isNotBlank()) {
+                        stringResource(R.string.qr_import_text, data.name)
+                    } else {
+                        stringResource(R.string.qr_import_text_no_name)
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            // Импортируем улей, сохраняя uuid из QR (чтобы связь не терялась).
+                            val id = hiveRepository.addHive(
+                                Hive(
+                                    id = 0,
+                                    name = data.name,
+                                    note = data.note,
+                                    uuid = data.uuid
+                                )
+                            ).toInt()
+                            pendingImport = null
+                            navController.popBackStack()
+                            navController.navigate("hive/$id")
+                        }
+                    }
+                ) {
+                    Text(stringResource(R.string.qr_import_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImport = null }) {
+                    Text(stringResource(R.string.qr_import_cancel))
+                }
+            }
+        )
     }
 }
