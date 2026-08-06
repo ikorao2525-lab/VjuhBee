@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">BeeCalc</string>
+    <string name="app_name_beta">BeeCalc β</string>
 
     <!-- Вкладки -->
     <string name="tab_calculator">Сироп</string>
@@ -105,4 +106,20 @@
     <string name="treatment_dose">Доза</string>
     <string name="note_label">Заметка</string>
     <string name="common_ok">ОК</string>
+
+    <!-- О приложении / премиум (v0.3) -->
+    <string name="about_title">О приложении</string>
+    <string name="about_beta_badge">Бета-сборка — новые функции раньше всех</string>
+    <string name="about_mission">Офлайн-помощник пчеловода: сироп, календарь работ, учёт ульев. Работает без интернета.</string>
+    <string name="about_version">Версия %1$s (%2$d) · канал %3$s</string>
+    <string name="about_donate_title">Чашка кофе разработчику — 99 ₽</string>
+    <string name="about_donate_text">Всё нужное для пасеки остаётся бесплатным. Донат — «спасибо» и доступ к чату пчеловодов и бета-обновлениям.</string>
+    <string name="about_donate_soon">Оплата через RuStore появится после подключения монетизации. Сейчас можно включить премиум тестовой кнопкой ниже.</string>
+    <string name="about_play_support_note">Приложение бесплатное. Поддержать разработку можно в версии BeeCalc из RuStore — без влияния на функции этой сборки.</string>
+    <string name="about_thanks_title">Спасибо за поддержку!</string>
+    <string name="about_thanks_text">Вы — премиум. Все рабочие функции по-прежнему бесплатны для всех; ваш донат помогает развивать приложение.</string>
+    <string name="about_chat_placeholder">Ссылка на общий чат (MAX) появится здесь, когда чат будет готов.</string>
+    <string name="about_test_section">Тест (без реальной оплаты)</string>
+    <string name="about_test_enable_premium">Включить премиум</string>
+    <string name="about_test_disable_premium">Выключить премиум</string>
 </resources>

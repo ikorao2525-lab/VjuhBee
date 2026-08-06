@@ -14,10 +14,38 @@ android {
         applicationId = "com.vjuhbee.beecalc"
         minSdk = 28
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.0"
+        versionCode = 3
+        versionName = "0.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Три канала публикации (SPEC.md §4, §9):
+    // play    — Google Play, без кнопки доната
+    // rustore — RuStore, донат «чашка кофе»
+    // beta    — отдельный applicationId, тестовый премиум, бета-фичи
+    flavorDimensions += "store"
+    productFlavors {
+        create("play") {
+            dimension = "store"
+            buildConfigField("String", "STORE_CHANNEL", "\"play\"")
+            buildConfigField("boolean", "SHOW_DONATE", "false")
+            buildConfigField("boolean", "IS_BETA", "false")
+        }
+        create("rustore") {
+            dimension = "store"
+            buildConfigField("String", "STORE_CHANNEL", "\"rustore\"")
+            buildConfigField("boolean", "SHOW_DONATE", "true")
+            buildConfigField("boolean", "IS_BETA", "false")
+        }
+        create("beta") {
+            dimension = "store"
+            applicationIdSuffix = ".beta"
+            versionNameSuffix = "-beta"
+            buildConfigField("String", "STORE_CHANNEL", "\"beta\"")
+            buildConfigField("boolean", "SHOW_DONATE", "true")
+            buildConfigField("boolean", "IS_BETA", "true")
+        }
     }
 
     buildTypes {
@@ -33,6 +61,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -51,6 +80,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.datastore.preferences)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
