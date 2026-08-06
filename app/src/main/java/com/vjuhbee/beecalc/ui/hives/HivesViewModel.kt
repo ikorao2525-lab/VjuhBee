@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 /** Открытый редактор улья: новый или существующий. */
 data class HiveEditor(
@@ -48,7 +49,14 @@ class HivesViewModel(app: Application) : AndroidViewModel(app) {
 
     fun saveHive(hive: Hive, isNew: Boolean) {
         viewModelScope.launch {
-            if (isNew) repository.addHive(hive) else repository.updateHive(hive)
+            // У нового улья uuid генерируется здесь, а не в модели,
+            // чтобы у него был единый источник (SPEC.md §9, v0.4).
+            val toSave = if (isNew && hive.uuid.isBlank()) {
+                hive.copy(uuid = UUID.randomUUID().toString())
+            } else {
+                hive
+            }
+            if (isNew) repository.addHive(toSave) else repository.updateHive(toSave)
             editor.value = null
         }
     }

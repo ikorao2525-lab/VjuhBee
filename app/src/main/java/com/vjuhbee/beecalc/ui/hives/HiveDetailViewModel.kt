@@ -20,6 +20,7 @@ sealed interface HiveDialog {
     data object EditHive : HiveDialog
     data object AddInspection : HiveDialog
     data object AddTreatment : HiveDialog
+    data object ShowQr : HiveDialog
 }
 
 data class HiveDetailUiState(

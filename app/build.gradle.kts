@@ -84,6 +84,8 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.datastore.preferences)
+    // Генерация QR-кодов ульев (SPEC.md §9, v0.4): офлайн, без Google-сервисов.
+    implementation(libs.zxing.core)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

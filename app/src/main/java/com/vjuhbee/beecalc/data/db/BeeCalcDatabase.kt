@@ -20,7 +20,7 @@ import java.util.Calendar
         InspectionEntity::class,
         TreatmentEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class BeeCalcDatabase : RoomDatabase() {
@@ -99,9 +99,34 @@ abstract class BeeCalcDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * v5 → v6: постоянный публичный id улья — uuid (SPEC.md §9, v0.4).
+         * Нужен для QR-кодов и переноса базы на другой телефон:
+         * не зависит от внутреннего id базы (он меняется при восстановлении).
+         * Существующим ульям генерим UUID v4 на месте через SQLite randomblob.
+         */
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE hives ADD COLUMN uuid TEXT NOT NULL DEFAULT ''"
+                )
+                // UUID v4: 8-4-4-4-12 hex, version 4, variant bits '89ab'.
+                db.execSQL(
+                    "UPDATE hives SET uuid = " +
+                        "lower(hex(randomblob(4)) || '-' || " +
+                        "hex(randomblob(2)) || '-' || " +
+                        "'4' || substr(hex(randomblob(2)), 2) || '-' || " +
+                        "substr('89ab', 1 + (abs(random()) % 4), 1) || " +
+                        "substr(hex(randomblob(2)), 2) || '-' || " +
+                        "hex(randomblob(6)))"
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_hives_uuid ON hives(uuid)")
+            }
+        }
+
         fun build(context: Context): BeeCalcDatabase =
             Room.databaseBuilder(context, BeeCalcDatabase::class.java, "beecalc.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
     }
 }

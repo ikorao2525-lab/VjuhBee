@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DatePicker
@@ -40,13 +42,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vjuhbee.beecalc.R
 import com.vjuhbee.beecalc.model.Inspection
 import com.vjuhbee.beecalc.model.Treatment
+import com.vjuhbee.beecalc.model.Hive
 import com.vjuhbee.beecalc.utils.formatDate
+import com.vjuhbee.beecalc.utils.generateHiveQr
+import android.graphics.Bitmap
 
 /**
  * Экран одного улья (SPEC.md §7): данные улья и история —
@@ -150,6 +157,16 @@ fun HiveDetailScreen(
                         )
                     }
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { viewModel.openDialog(HiveDialog.ShowQr) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                    ) {
+                        Text(stringResource(R.string.hive_show_qr))
+                    }
+                }
             }
         }
 
@@ -197,6 +214,10 @@ fun HiveDetailScreen(
         )
         HiveDialog.AddTreatment -> TreatmentDialog(
             onSave = { viewModel.addTreatment(it) },
+            onDismiss = { viewModel.closeDialog() }
+        )
+        HiveDialog.ShowQr -> HiveQrDialog(
+            hive = hive,
             onDismiss = { viewModel.closeDialog() }
         )
         null -> Unit
@@ -542,6 +563,66 @@ private fun NumberStepper(
             modifier = Modifier.heightIn(min = 48.dp)
         ) {
             Text("+", style = MaterialTheme.typography.titleLarge)
+        }
+    }
+}
+
+/**
+ * Диалог QR-кода улья (SPEC.md §9, v0.4): показ сгенерированной картинки
+ * и подсказкой про наклейку. Пока без «Поделиться» (сохранение/печать —
+ * отдельным шагом v0.4.x, чтобы не раздувать манифест FileProvider).
+ */
+@Composable
+private fun HiveQrDialog(
+    hive: Hive,
+    onDismiss: () -> Unit
+) {
+    val qrBitmap: Bitmap? = remember(hive.uuid) {
+        if (hive.uuid.isBlank()) null else generateHiveQr(hive.uuid)
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.hive_qr_title),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                val image: ImageBitmap? = qrBitmap?.asImageBitmap()
+                if (image != null) {
+                    Image(
+                        bitmap = image,
+                        contentDescription = stringResource(R.string.hive_qr_title),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                    )
+                } else {
+                    Text(
+                        text = hive.uuid,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.hive_qr_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                ) {
+                    Text(stringResource(R.string.hive_qr_close), style = MaterialTheme.typography.titleMedium)
+                }
+            }
         }
     }
 }

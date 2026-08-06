@@ -86,7 +86,13 @@ data class YearHarvestTotals(
 data class Hive(
     val id: Int,          // 0 = новый, id выдаст база
     val name: String,
-    val note: String = ""
+    val note: String = "",
+    /**
+     * Постоянный публичный идентификатор улья (SPEC.md §9, v0.4).
+     * Не зависит от внутреннего id базы — переживает перенос базы на
+     * другой телефон и используется в QR-кодах улья.
+     */
+    val uuid: String = ""
 )
 
 /** Осмотр улья (SPEC.md §7). */

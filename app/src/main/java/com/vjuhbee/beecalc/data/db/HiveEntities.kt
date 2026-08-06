@@ -14,11 +14,16 @@ import com.vjuhbee.beecalc.model.Treatment
  * его история удаляется каскадом.
  */
 
-@Entity(tableName = "hives")
+@Entity(
+    tableName = "hives",
+    indices = [Index(value = ["uuid"], unique = true)]
+)
 data class HiveEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
-    val note: String
+    val note: String,
+    /** Постоянный публичный id улья (SPEC.md §9, v0.4): QR-коды и перенос базы. */
+    val uuid: String
 )
 
 @Entity(
@@ -64,8 +69,8 @@ data class TreatmentEntity(
     val note: String
 )
 
-fun HiveEntity.toModel() = Hive(id = id, name = name, note = note)
-fun Hive.toEntity() = HiveEntity(id = id, name = name, note = note)
+fun HiveEntity.toModel() = Hive(id = id, name = name, note = note, uuid = uuid)
+fun Hive.toEntity() = HiveEntity(id = id, name = name, note = note, uuid = uuid)
 
 fun InspectionEntity.toModel() = Inspection(
     id = id, hiveId = hiveId, date = date,

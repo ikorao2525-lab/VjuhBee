@@ -107,6 +107,13 @@
     <string name="note_label">Заметка</string>
     <string name="common_ok">ОК</string>
 
+    <!-- QR-код улья (v0.4) -->
+    <string name="hive_show_qr">Показать QR</string>
+    <string name="hive_qr_title">QR-код улья</string>
+    <string name="hive_qr_hint">Наклейте этот QR на улей (минимум 5×5 см, матовая ламинация). Сканирование откроет улей в приложении.</string>
+    <string name="hive_qr_share">Поделиться</string>
+    <string name="hive_qr_close">Закрыть</string>
+
     <!-- О приложении / чаевые (v0.3.1) -->
     <string name="about_title">О приложении</string>
     <string name="about_beta_badge">Бета-сборка — новые функции раньше всех</string>
