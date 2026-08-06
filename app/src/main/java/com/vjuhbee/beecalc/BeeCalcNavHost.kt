@@ -70,7 +70,7 @@ fun BeeCalcNavHost() {
                         )
                     },
                     actions = {
-                        // Крупная зона нажатия: «О приложении» / донат / премиум.
+                        // «О приложении» / чаевые (SPEC.md §4).
                         IconButton(
                             onClick = { navController.navigate("about") },
                             modifier = Modifier.padding(end = 4.dp)

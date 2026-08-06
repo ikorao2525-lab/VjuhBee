@@ -2,9 +2,7 @@ package com.vjuhbee.beecalc
 
 import android.app.Application
 import com.vjuhbee.beecalc.data.CalendarRepository
-import com.vjuhbee.beecalc.data.DataStorePremiumRepository
 import com.vjuhbee.beecalc.data.HiveRepository
-import com.vjuhbee.beecalc.data.PremiumRepository
 import com.vjuhbee.beecalc.data.RoomCalendarRepository
 import com.vjuhbee.beecalc.data.RoomHiveRepository
 import com.vjuhbee.beecalc.data.db.BeeCalcDatabase
@@ -23,9 +21,5 @@ class BeeCalcApp : Application() {
 
     val hiveRepository: HiveRepository by lazy {
         RoomHiveRepository(database.hiveDao())
-    }
-
-    val premiumRepository: PremiumRepository by lazy {
-        DataStorePremiumRepository(this)
     }
 }

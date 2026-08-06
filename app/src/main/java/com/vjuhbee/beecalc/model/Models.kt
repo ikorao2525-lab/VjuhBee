@@ -109,9 +109,3 @@ data class Treatment(
     val dose: String = "",
     val note: String = ""
 )
-
-/** Статус премиума (SPEC.md §4): модель заложена, UI в v0.1 нет. */
-enum class PremiumState {
-    FREE,
-    PREMIUM
-}

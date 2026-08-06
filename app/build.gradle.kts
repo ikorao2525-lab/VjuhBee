@@ -14,28 +14,30 @@ android {
         applicationId = "com.vjuhbee.beecalc"
         minSdk = 28
         targetSdk = 37
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     // Три канала публикации (SPEC.md §4, §9):
-    // play    — Google Play, без кнопки доната
-    // rustore — RuStore, донат «чашка кофе»
-    // beta    — отдельный applicationId, тестовый премиум, бета-фичи
+    // play    — Google Play, без кнопки чаевых
+    // rustore — RuStore, ссылка на чаевые (CloudTips)
+    // beta    — отдельный applicationId, бета-фичи + чаевые
     flavorDimensions += "store"
     productFlavors {
         create("play") {
             dimension = "store"
             buildConfigField("String", "STORE_CHANNEL", "\"play\"")
-            buildConfigField("boolean", "SHOW_DONATE", "false")
+            buildConfigField("boolean", "SHOW_TIPS", "false")
+            buildConfigField("String", "TIPS_URL", "\"\"")
             buildConfigField("boolean", "IS_BETA", "false")
         }
         create("rustore") {
             dimension = "store"
             buildConfigField("String", "STORE_CHANNEL", "\"rustore\"")
-            buildConfigField("boolean", "SHOW_DONATE", "true")
+            buildConfigField("boolean", "SHOW_TIPS", "true")
+            buildConfigField("String", "TIPS_URL", "\"https://pay.cloudtips.ru/p/99472576\"")
             buildConfigField("boolean", "IS_BETA", "false")
         }
         create("beta") {
@@ -43,7 +45,8 @@ android {
             applicationIdSuffix = ".beta"
             versionNameSuffix = "-beta"
             buildConfigField("String", "STORE_CHANNEL", "\"beta\"")
-            buildConfigField("boolean", "SHOW_DONATE", "true")
+            buildConfigField("boolean", "SHOW_TIPS", "true")
+            buildConfigField("String", "TIPS_URL", "\"https://pay.cloudtips.ru/p/99472576\"")
             buildConfigField("boolean", "IS_BETA", "true")
         }
     }

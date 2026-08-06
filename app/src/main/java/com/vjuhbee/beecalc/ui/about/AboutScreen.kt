@@ -1,8 +1,8 @@
 package com.vjuhbee.beecalc.ui.about
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -18,18 +18,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vjuhbee.beecalc.R
-import com.vjuhbee.beecalc.model.PremiumState
 
 /**
- * Экран «О приложении» (SPEC.md §4, v0.3).
- * Play: без кнопки доната, нейтральное упоминание RuStore.
- * RuStore/beta: «чашка кофе», благодарность, тестовый флаг премиума.
+ * Экран «О приложении» (SPEC.md §4, v0.3.1).
+ * Play: без кнопки чаевых. RuStore/beta: добровольные чаевые по внешней ссылке.
  */
 @Composable
 fun AboutScreen(
@@ -37,7 +37,8 @@ fun AboutScreen(
     viewModel: AboutViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val isPremium = state.premiumState == PremiumState.PREMIUM
+    val context = LocalContext.current
+    val tipsUrlReady = state.tipsUrl.isNotBlank()
 
     Column(
         modifier = Modifier
@@ -90,90 +91,46 @@ fun AboutScreen(
             style = MaterialTheme.typography.bodyMedium
         )
 
-        if (isPremium) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.about_thanks_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = stringResource(R.string.about_thanks_text),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = stringResource(R.string.about_chat_placeholder),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        } else if (state.showDonate) {
+        if (state.showTips) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = stringResource(R.string.about_donate_title),
+                        text = stringResource(R.string.about_tips_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = stringResource(R.string.about_donate_text),
+                        text = stringResource(R.string.about_tips_text),
                         style = MaterialTheme.typography.bodyLarge
                     )
-                    Text(
-                        text = stringResource(R.string.about_donate_soon),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    if (tipsUrlReady) {
+                        Button(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, state.tipsUrl.toUri())
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
+                        ) {
+                            Text(stringResource(R.string.about_tips_button))
+                        }
+                    } else {
+                        Text(
+                            text = stringResource(R.string.about_tips_pending),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
             }
         } else {
-            // Play-сборка: без CTA покупки (политика Google Play, SPEC.md §4).
             Text(
                 text = stringResource(R.string.about_play_support_note),
                 style = MaterialTheme.typography.bodyMedium
             )
-        }
-
-        if (state.canTogglePremiumForTest) {
-            Text(
-                text = stringResource(R.string.about_test_section),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!isPremium) {
-                    Button(
-                        onClick = { viewModel.setPremiumForTest(true) },
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp)
-                    ) {
-                        Text(stringResource(R.string.about_test_enable_premium))
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = { viewModel.setPremiumForTest(false) },
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp)
-                    ) {
-                        Text(stringResource(R.string.about_test_disable_premium))
-                    }
-                }
-            }
         }
     }
 }
