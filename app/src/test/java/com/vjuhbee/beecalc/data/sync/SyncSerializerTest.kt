@@ -38,6 +38,14 @@ class SyncModelsTest {
     }
 
     @Test
+    fun syncFileMetadataIsStoredInDto() {
+        val file = SyncFile(exportedAt = 42L, appVersion = "0.6.3", source = "test")
+        assertEquals(42L, file.exportedAt)
+        assertEquals("0.6.3", file.appVersion)
+        assertEquals("test", file.source)
+    }
+
+    @Test
     fun taskWithoutLinksMapsToEmptyString() {
         val task = CalendarTask(
             id = 0,

@@ -51,6 +51,8 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private var file: SyncFile? = null
+    private var lastImportBackup: BackupInfo? = null
+    val fileMetadata: SyncFile? get() = file
     private var plan: ImportPlan? = null
     private var conflictIndex = 0
     private val conflictChoices = mutableMapOf<String, Boolean>()
@@ -125,7 +127,8 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val sf = SyncSerializer.decode(text)
                 val backup = SyncSerializer.encode(syncRepository.export())
-                SyncFileUtils.writeBackup(getApplication(), backup)
+                val backupFile = SyncFileUtils.writeBackup(getApplication(), backup)
+                lastImportBackup = SyncFileUtils.BackupInfo(backupFile)
                 refreshBackups()
                 file = sf
                 val p = syncRepository.buildPlan(sf)
@@ -212,6 +215,11 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun undoLastImport() {
+        val backup = lastImportBackup ?: return
+        restoreBackup(backup)
+    }
+
     fun selectBackup(info: BackupInfo) { pendingBackup = info }
 
     fun saveBackup(info: BackupInfo, uri: Uri) {
@@ -235,6 +243,7 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
 
     fun reset() {
         file = null
+        lastImportBackup = null
         plan = null
         conflictIndex = 0
         conflictChoices.clear()

@@ -1,5 +1,7 @@
 package com.vjuhbee.beecalc.data.sync
 
+import com.vjuhbee.beecalc.BuildConfig
+
 import com.vjuhbee.beecalc.data.CalendarRepository
 import com.vjuhbee.beecalc.data.HiveRepository
 import com.vjuhbee.beecalc.model.CalendarTask
@@ -37,6 +39,8 @@ class SyncRepository(
         return SyncFile(
             version = 1,
             exportedAt = System.currentTimeMillis(),
+            appVersion = BuildConfig.VERSION_NAME,
+            source = "BeeCalc",
             hives = hives.map { it.toSync() },
             inspections = inspections.map {
                 it.toSync().copy(hiveUuid = hiveUuidById[it.hiveId] ?: "")

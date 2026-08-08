@@ -39,9 +39,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vjuhbee.beecalc.R
 import com.vjuhbee.beecalc.data.sync.HiveConflict
 import java.text.SimpleDateFormat
+import java.text.DecimalFormat
 import java.util.Date
 import java.util.Locale
-import java.text.DecimalFormat
 
 /**
  * Экран «Синхронизация пасеки» (SPEC.md §9, v0.4): офлайн-экспорт/импорт
@@ -143,6 +143,7 @@ fun SyncScreen(
                 when (val step = state.step) {
                     is ImportStep.Summary -> SummaryContent(
                         plan = step.plan,
+                        fileMetadata = viewModel.fileMetadata,
                         onProceed = { viewModel.proceedToResolve() },
                         onCancel = { viewModel.reset() }
                     )
@@ -161,6 +162,8 @@ fun SyncScreen(
                     }
                     is ImportStep.Done -> DoneContent(
                         count = state.importedCount,
+                        canUndo = state.backups.isNotEmpty(),
+                        onUndo = { viewModel.undoLastImport() },
                         onBack = { viewModel.reset() }
                     )
                     else -> {}
@@ -271,6 +274,7 @@ private fun formatBackup(backup: com.vjuhbee.beecalc.data.sync.SyncFileUtils.Bac
 @Composable
 private fun SummaryContent(
     plan: com.vjuhbee.beecalc.data.sync.ImportPlan,
+    fileMetadata: com.vjuhbee.beecalc.data.sync.SyncFile?,
     onProceed: () -> Unit,
     onCancel: () -> Unit
 ) {
@@ -285,6 +289,9 @@ private fun SummaryContent(
             Text(stringResource(R.string.sync_summary_updated, plan.totalUpdated))
             Text(stringResource(R.string.sync_summary_conflicts, plan.totalConflicts))
             Text(stringResource(R.string.sync_summary_breakdown, plan.newHives.size, plan.newInspections.size, plan.newTreatments.size, plan.newTasks.size))
+            fileMetadata?.let { metadata ->
+                Text(stringResource(R.string.sync_summary_file_metadata, formatSyncMetadata(metadata)))
+            }
             Text(stringResource(R.string.sync_summary_updated_breakdown, plan.updatedInspections.size, plan.updatedTreatments.size, plan.updatedTasks.size))
             Text(stringResource(R.string.sync_backup_notice), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             if (plan.totalConflicts > 0) {
@@ -305,6 +312,8 @@ private fun SummaryContent(
         }
     }
 }
+
+private fun formatSyncMetadata(file: com.vjuhbee.beecalc.data.sync.SyncFile): String = "${file.source}, версия ${file.appVersion}, ${file.hives.size} ульев, ${file.tasks.size} работ"
 
 @Composable
 private fun ConflictContent(
@@ -361,7 +370,7 @@ private fun ConflictContent(
 }
 
 @Composable
-private fun DoneContent(count: Int, onBack: () -> Unit) {
+private fun DoneContent(count: Int, canUndo: Boolean, onUndo: () -> Unit, onBack: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier

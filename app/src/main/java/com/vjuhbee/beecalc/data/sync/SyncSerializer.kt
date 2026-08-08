@@ -13,6 +13,8 @@ object SyncSerializer {
         val root = JSONObject()
         root.put("version", file.version)
         root.put("exportedAt", file.exportedAt)
+        root.put("appVersion", file.appVersion)
+        root.put("source", file.source)
         root.put("hives", JSONArray().apply {
             file.hives.forEach {
                 put(JSONObject().apply {
@@ -152,6 +154,8 @@ object SyncSerializer {
         return SyncFile(
             version = root.optInt("version", 1),
             exportedAt = root.optLong("exportedAt", 0L),
+            appVersion = root.optString("appVersion", "unknown"),
+            source = root.optString("source", "BeeCalc"),
             hives = syncHives,
             inspections = syncInspections,
             treatments = syncTreatments,

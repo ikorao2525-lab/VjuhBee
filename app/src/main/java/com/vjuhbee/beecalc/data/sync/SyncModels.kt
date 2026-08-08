@@ -20,6 +20,8 @@ import com.vjuhbee.beecalc.model.HarvestUnit
 data class SyncFile(
     val version: Int = 1,
     val exportedAt: Long = 0L,
+    val appVersion: String = "unknown",
+    val source: String = "BeeCalc",
     val hives: List<SyncHive> = emptyList(),
     val inspections: List<SyncInspection> = emptyList(),
     val treatments: List<SyncTreatment> = emptyList(),
