@@ -80,6 +80,8 @@ class RoomCalendarRepository(private val dao: CalendarTaskDao) : CalendarReposit
 
         val lastYear = dao.latestYear() ?: return
         // Отметки и урожай принадлежат своему году — в новый не переносятся.
+        // Привязку к ульям (linkedHiveUuids) сохраняем намеренно: по архиву
+        // прошлых лет можно увидеть, какие работы велись с каждым ульем (v0.5).
         val carriedOver = dao.activeTasksForYear(lastYear).map { entity ->
             entity.copy(
                 id = 0,

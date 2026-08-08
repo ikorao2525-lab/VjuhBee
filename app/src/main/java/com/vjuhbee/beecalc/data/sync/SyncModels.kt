@@ -70,6 +70,7 @@ data class SyncTask(
     val propolisGrams: Double?,
     val waxKg: Double?,
     val royalJellyGrams: Double?,
+    val linkedHiveUuids: String,
     val updatedAt: Long
 )
 
@@ -95,5 +96,6 @@ fun CalendarTask.toSync() = SyncTask(
     honeyKg = honeyKg, honeyLiters = honeyLiters,
     pollenKg = pollenKg, beeBreadKg = beeBreadKg,
     propolisGrams = propolisGrams, waxKg = waxKg, royalJellyGrams = royalJellyGrams,
+    linkedHiveUuids = linkedHiveUuids.joinToString(","),
     updatedAt = updatedAt
 )

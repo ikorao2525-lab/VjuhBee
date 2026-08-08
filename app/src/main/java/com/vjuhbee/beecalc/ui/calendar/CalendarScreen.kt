@@ -29,6 +29,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vjuhbee.beecalc.R
 import com.vjuhbee.beecalc.model.CalendarTask
+import com.vjuhbee.beecalc.model.Hive
 import com.vjuhbee.beecalc.model.Importance
 import com.vjuhbee.beecalc.model.TaskCategory
 import com.vjuhbee.beecalc.model.YearHarvestTotals
@@ -57,10 +59,24 @@ import com.vjuhbee.beecalc.model.YearHarvestTotals
  * Удалённые работы лежат в корзине внизу, их можно вернуть.
  */
 @Composable
-fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
+fun CalendarScreen(
+    year: Int? = null,
+    month: Int? = null,
+    viewModel: CalendarViewModel = viewModel()
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val monthNames = stringArrayResource(R.array.month_names)
     var trashExpanded by remember { mutableStateOf(false) }
+    // uuid улья -> имя: для показа привязанных ульев в карточке работы.
+    val nameByUuid = state.hives.associate { it.uuid to it.name }
+
+    // Переход из экрана улья (маршрут calendar/{year}/{month}): раскрыть
+    // нужный год+месяц, где работа видна (SPEC.md §5.2, v0.5).
+    if (year != null && month != null) {
+        LaunchedEffect(year, month) {
+            viewModel.expandTo(year, month)
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -108,6 +124,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
                         items(tasks, key = { "task_${it.id}" }) { task ->
                             TaskCard(
                                 task = task,
+                                hiveNames = task.linkedHiveUuids.mapNotNull { nameByUuid[it] },
                                 onDoneChange = { done -> viewModel.setDone(task, done) },
                                 onEdit = { viewModel.startEdit(task) },
                                 onDelete = { viewModel.deleteTask(task) }
@@ -176,6 +193,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
         TaskEditorDialog(
             editor = editor,
             monthNames = monthNames,
+            hives = state.hives,
             onSave = { task -> viewModel.saveTask(task, editor.isNew) },
             onDelete = { viewModel.deleteTask(it) },
             onDismiss = { viewModel.closeEditor() }
@@ -275,6 +293,7 @@ private fun MonthHeader(
 @Composable
 private fun TaskCard(
     task: CalendarTask,
+    hiveNames: List<String>,
     onDoneChange: (Boolean) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -332,6 +351,14 @@ private fun TaskCard(
                         MaterialTheme.colorScheme.onSurface
                     }
                 )
+                if (hiveNames.isNotEmpty()) {
+                    Text(
+                        text = hiveNames.joinToString(" · "),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 HarvestSummary(
                     harvest = task.toHarvestTotals(),
                     style = MaterialTheme.typography.titleMedium,
@@ -434,6 +461,7 @@ private fun TrashCard(
 private fun TaskEditorDialog(
     editor: TaskEditor,
     monthNames: Array<String>,
+    hives: List<Hive>,
     onSave: (CalendarTask) -> Unit,
     onDelete: (CalendarTask) -> Unit,
     onDismiss: () -> Unit
@@ -444,6 +472,9 @@ private fun TaskEditorDialog(
     var month by remember { mutableStateOf(editor.task.month) }
     var category by remember { mutableStateOf(editor.task.category) }
     var isImportant by remember { mutableStateOf(editor.task.importance == Importance.HIGH) }
+    var linkedUuids by remember {
+        mutableStateOf(editor.task.linkedHiveUuids.toSet())
+    }
     var honeyKgText by remember { mutableStateOf(editor.task.honeyKg.toAmountText()) }
     var honeyLitersText by remember { mutableStateOf(editor.task.honeyLiters.toAmountText()) }
     var pollenText by remember { mutableStateOf(editor.task.pollenKg.toAmountText()) }
@@ -523,6 +554,30 @@ private fun TaskEditorDialog(
                     }
                 }
 
+                // Привязка работы к ульям (SPEC.md §5.2, v0.5). Показываем
+                // только если есть хотя бы один улей.
+                if (hives.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.editor_hives_section),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        hives.forEach { hive ->
+                            FilterChip(
+                                selected = hive.uuid in linkedUuids,
+                                onClick = {
+                                    linkedUuids = if (hive.uuid in linkedUuids) {
+                                        linkedUuids - hive.uuid
+                                    } else {
+                                        linkedUuids + hive.uuid
+                                    }
+                                },
+                                label = { Text(hive.name) }
+                            )
+                        }
+                    }
+                }
+
                 // Сбор продукции — необязательные поля, доступны для любой работы
                 // (пыльцу или прополис можно собрать и в день «Ухода»).
                 Text(
@@ -562,7 +617,8 @@ private fun TaskEditorDialog(
                                 beeBreadKg = parseAmount(beeBreadText),
                                 propolisGrams = parseAmount(propolisText),
                                 waxKg = parseAmount(waxText),
-                                royalJellyGrams = parseAmount(royalJellyText)
+                                royalJellyGrams = parseAmount(royalJellyText),
+                                linkedHiveUuids = linkedUuids.toList()
                             )
                         )
                     },

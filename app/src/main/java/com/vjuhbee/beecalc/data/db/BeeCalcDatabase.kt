@@ -20,7 +20,7 @@ import java.util.Calendar
         InspectionEntity::class,
         TreatmentEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class BeeCalcDatabase : RoomDatabase() {
@@ -180,11 +180,19 @@ abstract class BeeCalcDatabase : RoomDatabase() {
             }
         }
 
+        // v7 → v8: привязка работ календаря к ульям (SPEC.md §5.2, v0.5).
+        // Список uuid ульев через запятую (как теги), пустая строка — без привязки.
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE calendar_tasks ADD COLUMN linkedHiveUuids TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun build(context: Context): BeeCalcDatabase =
             Room.databaseBuilder(context, BeeCalcDatabase::class.java, "beecalc.db")
                 .addMigrations(
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-                    MIGRATION_5_6, MIGRATION_6_7
+                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8
                 )
                 .build()
     }

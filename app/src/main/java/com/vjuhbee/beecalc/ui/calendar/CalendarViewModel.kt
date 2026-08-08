@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vjuhbee.beecalc.BeeCalcApp
 import com.vjuhbee.beecalc.model.CalendarTask
+import com.vjuhbee.beecalc.model.Hive
 import com.vjuhbee.beecalc.model.TaskCategory
 import com.vjuhbee.beecalc.model.YearHarvestTotals
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,12 +36,14 @@ data class CalendarUiState(
     val expandedYears: Set<Int> = emptySet(),
     val expandedMonths: Set<MonthKey> = emptySet(),
     val deletedTasks: List<CalendarTask> = emptyList(),
+    val hives: List<Hive> = emptyList(),
     val editor: TaskEditor? = null
 )
 
 class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repository = (app as BeeCalcApp).calendarRepository
+    private val hiveRepository = (app as BeeCalcApp).hiveRepository
 
     private val currentYear = Calendar.getInstance().get(Calendar.YEAR)
     private val currentMonth = Calendar.getInstance().get(Calendar.MONTH) + 1
@@ -80,6 +83,8 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 deletedTasks = deleted,
                 editor = editorState
             )
+        }.combine(hiveRepository.observeHives()) { state, hives ->
+            state.copy(hives = hives)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -102,6 +107,12 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleMonth(year: Int, month: Int) {
         val key = MonthKey(year, month)
         expandedMonths.update { if (key in it) it - key else it + key }
+    }
+
+    /** Раскрыть сразу конкретный год и месяц (переход из экрана улья, v0.5). */
+    fun expandTo(year: Int, month: Int) {
+        expandedYears.update { it + year }
+        expandedMonths.update { it + MonthKey(year, month) }
     }
 
     fun setDone(task: CalendarTask, done: Boolean) {

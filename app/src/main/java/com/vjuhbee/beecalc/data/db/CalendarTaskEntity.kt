@@ -34,6 +34,7 @@ data class CalendarTaskEntity(
     val propolisGrams: Double?,
     val waxKg: Double?,
     val royalJellyGrams: Double?,
+    val linkedHiveUuids: String,
     val uuid: String = "",
     val updatedAt: Long = 0L
 )
@@ -57,6 +58,7 @@ fun CalendarTaskEntity.toModel() = CalendarTask(
     propolisGrams = propolisGrams,
     waxKg = waxKg,
     royalJellyGrams = royalJellyGrams,
+    linkedHiveUuids = if (linkedHiveUuids.isBlank()) emptyList() else linkedHiveUuids.split(",").filter { it.isNotBlank() },
     uuid = uuid,
     updatedAt = updatedAt
 )
@@ -80,6 +82,7 @@ fun CalendarTask.toEntity() = CalendarTaskEntity(
     propolisGrams = propolisGrams,
     waxKg = waxKg,
     royalJellyGrams = royalJellyGrams,
+    linkedHiveUuids = linkedHiveUuids.joinToString(","),
     uuid = uuid,
     updatedAt = updatedAt
 )

@@ -53,6 +53,7 @@
     <string name="editor_short_description">Короткое описание</string>
     <string name="editor_full_description">Полное описание (необязательно)</string>
     <string name="editor_category">Категория</string>
+    <string name="editor_hives_section">Привязать работу к улью (тапните по названию улья):</string>
     <string name="editor_save">Сохранить</string>
     <string name="editor_cancel">Отмена</string>
     <string name="editor_delete">Удалить</string>
@@ -94,6 +95,12 @@
     <string name="hive_delete_confirm">Точно удалить?</string>
     <string name="hive_history_title">История</string>
     <string name="hive_history_empty">Записей пока нет. Добавьте первый осмотр или обработку.</string>
+    <string name="hive_linked_tasks_title">Привязанные работы (%1$d)</string>
+    <string name="hive_linked_tasks_empty">К этому улью пока не привязано работ из календаря.</string>
+    <string name="hive_linked_task_done">Выполнено ✓</string>
+    <string name="hive_linked_task_pending">Не выполнено</string>
+    <string name="hive_linked_unlink">Отвязать от улья</string>
+    <string name="hive_linked_unlink_confirm">Точно отвязать?</string>
     <string name="inspection_label">Осмотр</string>
     <string name="treatment_label">Обработка</string>
     <string name="inspection_frames">Рамок</string>

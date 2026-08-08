@@ -113,8 +113,10 @@ fun BeeCalcNavHost() {
                 NavigationBar {
                     tabs.forEach { tab ->
                         // Экран улья (hive/{id}) относится к вкладке «Ульи».
+                        // Маршрут calendar/{year}/{month} (переход из улья) — к «Календарю».
                         val selected = currentRoute == tab.route ||
-                            (tab.route == "hives" && currentRoute?.startsWith("hive/") == true)
+                            (tab.route == "hives" && currentRoute?.startsWith("hive/") == true) ||
+                            (tab.route == "calendar" && currentRoute?.startsWith("calendar/") == true)
                         NavigationBarItem(
                             selected = selected,
                             onClick = {
@@ -189,7 +191,9 @@ fun BeeCalcNavHost() {
                 route = "hive/{hiveId}",
                 arguments = listOf(navArgument("hiveId") { type = NavType.IntType })
             ) {
-                HiveDetailScreen(onBack = { navController.popBackStack() })
+                HiveDetailScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable("about") {
                 AboutScreen(onBack = { navController.popBackStack() })

@@ -2,6 +2,7 @@ package com.vjuhbee.beecalc.ui.hives
 
 import android.content.Intent
 import android.graphics.Bitmap
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -41,9 +42,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.ImageBitmap
@@ -52,9 +55,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vjuhbee.beecalc.R
+import com.vjuhbee.beecalc.model.CalendarTask
 import com.vjuhbee.beecalc.model.Inspection
 import com.vjuhbee.beecalc.model.Treatment
 import com.vjuhbee.beecalc.model.Hive
+import com.vjuhbee.beecalc.model.TaskCategory
+import com.vjuhbee.beecalc.model.YearHarvestTotals
 import com.vjuhbee.beecalc.utils.createHiveQrPoster
 import com.vjuhbee.beecalc.utils.formatDate
 import com.vjuhbee.beecalc.utils.generateHiveQr
@@ -78,6 +84,8 @@ fun HiveDetailScreen(
 
     val hive = state.hive ?: return
     var confirmDeleteHive by remember { mutableStateOf(false) }
+    // Выбранная привязанная работа — показываем её read-only поверх экрана.
+    var selectedTask by remember { mutableStateOf<CalendarTask?>(null) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -175,6 +183,32 @@ fun HiveDetailScreen(
             }
         }
 
+        item(key = "linked_tasks_title") {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(R.string.hive_linked_tasks_title, state.linkedTasks.size),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                if (state.linkedTasks.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.hive_linked_tasks_empty),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                } else {
+                    // Короткий список привязанных работ; по нажатию — подробности
+                    // работы поверх экрана улья (SPEC.md §5.2, v0.5).
+                    state.linkedTasks.forEach { task ->
+                        LinkedTaskRow(
+                            task = task,
+                            onClick = { selectedTask = task }
+                        )
+                    }
+                }
+            }
+        }
+
         item(key = "history_title") {
             Text(
                 text = stringResource(R.string.hive_history_title),
@@ -226,6 +260,19 @@ fun HiveDetailScreen(
             onDismiss = { viewModel.closeDialog() }
         )
         null -> Unit
+    }
+
+    // Подробности привязанной работы поверх экрана улья (read-only).
+    selectedTask?.let { task ->
+        LinkedTaskDialog(
+            task = task,
+            hiveUuid = hive.uuid,
+            onUnlink = {
+                viewModel.unlinkTask(task, hive.uuid)
+                selectedTask = null
+            },
+            onDismiss = { selectedTask = null }
+        )
     }
 }
 
@@ -691,4 +738,227 @@ private fun HiveQrDialog(
             }
         }
     }
+}
+
+/**
+ * Короткая строка привязанной работы на экране улья (SPEC.md §5.2, v0.5).
+ * Название + месяц/год; выполненные работы зачёркиваются и приглушаются.
+ * По нажатию — подробности работы поверх экрана улья.
+ */
+@Composable
+private fun LinkedTaskRow(
+    task: CalendarTask,
+    onClick: () -> Unit
+) {
+    val monthNames = stringArrayResource(R.array.month_names)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = task.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textDecoration = if (task.isDone) TextDecoration.LineThrough else null,
+                color = if (task.isDone) {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = if (task.isDone) {
+                    "${monthNames[task.month - 1]} ${task.year} ✓"
+                } else {
+                    "${monthNames[task.month - 1]} ${task.year}"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * Подробности привязанной работы поверх экрана улья (SPEC.md §5.2, v0.5).
+ * Полное описание как в календаре, но без редактирования. Кнопка
+ * «Отвязать» убирает связь работы с ульем; сама работа в календаре
+ * остаётся (для отчётов по годам).
+ */
+@Composable
+private fun LinkedTaskDialog(
+    task: CalendarTask,
+    hiveUuid: String,
+    onUnlink: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var confirmUnlink by remember { mutableStateOf(false) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = task.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textDecoration = if (task.isDone) TextDecoration.LineThrough else null,
+                    color = if (task.isDone) {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
+                )
+
+                val monthNames = stringArrayResource(R.array.month_names)
+                val categoryName = categoryNameRes(task.category)
+                Text(
+                    text = "${monthNames[task.month - 1]} ${task.year} · ${stringResource(categoryName)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (task.shortDescription.isNotBlank()) {
+                    Text(
+                        text = task.shortDescription,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+                if (task.fullDescription != null) {
+                    Text(
+                        text = task.fullDescription,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                // Статус выполнения, как в календаре (пункт 3).
+                Text(
+                    text = if (task.isDone) {
+                        stringResource(R.string.hive_linked_task_done)
+                    } else {
+                        stringResource(R.string.hive_linked_task_pending)
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (task.isDone) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+
+                LinkedHarvestSummary(
+                    harvest = task.toHarvestTotals(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    bold = true
+                )
+
+                TextButton(
+                    onClick = {
+                        if (confirmUnlink) onUnlink() else confirmUnlink = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (confirmUnlink) R.string.hive_linked_unlink_confirm
+                            else R.string.hive_linked_unlink
+                        ),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                ) {
+                    Text(stringResource(R.string.editor_cancel))
+                }
+            }
+        }
+    }
+}
+
+/** Сводка по сбору: только ненулевые продукты, через « · ». */
+@Composable
+private fun LinkedHarvestSummary(
+    harvest: YearHarvestTotals,
+    style: androidx.compose.ui.text.TextStyle,
+    color: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified,
+    bold: Boolean = false
+) {
+    if (!harvest.hasAny) return
+    val parts = buildList {
+        if (harvest.honeyKg > 0) {
+            add(stringResource(R.string.harvest_honey_kg, formatAmount(harvest.honeyKg)))
+        }
+        if (harvest.honeyLiters > 0) {
+            add(stringResource(R.string.harvest_honey_l, formatAmount(harvest.honeyLiters)))
+        }
+        if (harvest.pollenKg > 0) {
+            add(stringResource(R.string.harvest_pollen, formatAmount(harvest.pollenKg)))
+        }
+        if (harvest.beeBreadKg > 0) {
+            add(stringResource(R.string.harvest_bee_bread, formatAmount(harvest.beeBreadKg)))
+        }
+        if (harvest.propolisGrams > 0) {
+            add(stringResource(R.string.harvest_propolis, formatAmount(harvest.propolisGrams)))
+        }
+        if (harvest.waxKg > 0) {
+            add(stringResource(R.string.harvest_wax, formatAmount(harvest.waxKg)))
+        }
+        if (harvest.royalJellyGrams > 0) {
+            add(stringResource(R.string.harvest_royal_jelly, formatAmount(harvest.royalJellyGrams)))
+        }
+    }
+    Text(
+        text = parts.joinToString(" · "),
+        style = style,
+        fontWeight = if (bold) FontWeight.Bold else null,
+        color = color
+    )
+}
+
+private fun CalendarTask.toHarvestTotals() = YearHarvestTotals(
+    honeyKg = honeyKg ?: 0.0,
+    honeyLiters = honeyLiters ?: 0.0,
+    pollenKg = pollenKg ?: 0.0,
+    beeBreadKg = beeBreadKg ?: 0.0,
+    propolisGrams = propolisGrams ?: 0.0,
+    waxKg = waxKg ?: 0.0,
+    royalJellyGrams = royalJellyGrams ?: 0.0
+)
+
+/** «120» или «37.5» — без хвоста нулей. */
+private fun formatAmount(value: Double): String =
+    if (value % 1.0 == 0.0) value.toInt().toString()
+    else String.format(java.util.Locale.US, "%.1f", value)
+
+private fun categoryNameRes(category: TaskCategory): Int = when (category) {
+    TaskCategory.INSPECTION -> R.string.category_inspection
+    TaskCategory.FEEDING -> R.string.category_feeding
+    TaskCategory.TREATMENT -> R.string.category_treatment
+    TaskCategory.MAINTENANCE -> R.string.category_maintenance
+    TaskCategory.HARVEST -> R.string.category_harvest
+    TaskCategory.SEASONAL -> R.string.category_seasonal
+    TaskCategory.OTHER -> R.string.category_other
 }

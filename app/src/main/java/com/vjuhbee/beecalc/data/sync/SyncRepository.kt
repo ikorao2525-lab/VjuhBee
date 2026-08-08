@@ -220,6 +220,7 @@ private fun SyncTask.toModel() = CalendarTask(
     honeyKg = honeyKg, honeyLiters = honeyLiters,
     pollenKg = pollenKg, beeBreadKg = beeBreadKg,
     propolisGrams = propolisGrams, waxKg = waxKg, royalJellyGrams = royalJellyGrams,
+    linkedHiveUuids = if (linkedHiveUuids.isBlank()) emptyList() else linkedHiveUuids.split(",").filter { it.isNotBlank() },
     uuid = uuid, updatedAt = updatedAt
 )
 
@@ -233,5 +234,6 @@ private fun CalendarTask.copyFromSync(s: SyncTask) = copy(
     honeyKg = s.honeyKg, honeyLiters = s.honeyLiters,
     pollenKg = s.pollenKg, beeBreadKg = s.beeBreadKg,
     propolisGrams = s.propolisGrams, waxKg = s.waxKg, royalJellyGrams = s.royalJellyGrams,
+    linkedHiveUuids = if (s.linkedHiveUuids.isBlank()) emptyList() else s.linkedHiveUuids.split(",").filter { it.isNotBlank() },
     updatedAt = s.updatedAt
 )

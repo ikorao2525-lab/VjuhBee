@@ -5,10 +5,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.vjuhbee.beecalc.BeeCalcApp
+import com.vjuhbee.beecalc.model.CalendarTask
 import com.vjuhbee.beecalc.model.Hive
 import com.vjuhbee.beecalc.model.Inspection
 import com.vjuhbee.beecalc.model.Treatment
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -27,6 +30,7 @@ data class HiveDetailUiState(
     val hive: Hive? = null,
     val inspections: List<Inspection> = emptyList(),
     val treatments: List<Treatment> = emptyList(),
+    val linkedTasks: List<CalendarTask> = emptyList(),
     val dialog: HiveDialog? = null,
     val isDeleted: Boolean = false
 )
@@ -37,6 +41,7 @@ class HiveDetailViewModel(
 ) : AndroidViewModel(app) {
 
     private val repository = (app as BeeCalcApp).hiveRepository
+    private val calendarRepository = (app as BeeCalcApp).calendarRepository
 
     /** id улья приходит из маршрута hive/{hiveId}. */
     private val hiveId: Int = checkNotNull(savedStateHandle["hiveId"])
@@ -44,20 +49,32 @@ class HiveDetailViewModel(
     private val dialog = MutableStateFlow<HiveDialog?>(null)
     private val deleted = MutableStateFlow(false)
 
+    /**
+     * Работы календаря, привязанные к этому улью (SPEC.md §5.2, v0.5):
+     * любая задача, в linkedHiveUuids которой есть uuid улья (все годы —
+     * архив для отчётности).
+     */
+    private val linkedTasks: Flow<List<CalendarTask>> =
+        combine(repository.observeHive(hiveId), calendarRepository.observeTasks()) { hive, tasks ->
+            val uuid = hive?.uuid ?: return@combine emptyList()
+            tasks.filter { uuid in it.linkedHiveUuids }
+        }
+
     val uiState: StateFlow<HiveDetailUiState> =
         combine(
             repository.observeHive(hiveId),
             repository.observeInspections(hiveId),
             repository.observeTreatments(hiveId),
-            dialog,
-            deleted
-        ) { hive, inspections, treatments, dialogState, isDeleted ->
+            linkedTasks,
+            combine(dialog, deleted) { d, del -> d to del }
+        ) { hive, inspections, treatments, linked, dd ->
             HiveDetailUiState(
                 hive = hive,
                 inspections = inspections,
                 treatments = treatments,
-                dialog = dialogState,
-                isDeleted = isDeleted
+                linkedTasks = linked,
+                dialog = dd.first,
+                isDeleted = dd.second
             )
         }.stateIn(
             scope = viewModelScope,
@@ -121,5 +138,21 @@ class HiveDetailViewModel(
 
     fun deleteTreatment(treatment: Treatment) {
         viewModelScope.launch { repository.deleteTreatment(treatment) }
+    }
+
+    /**
+     * Отвязать работу от этого улья (SPEC.md §5.2, v0.5).
+     * Убираем uuid улья из linkedHiveUuids работы; работа в календаре остаётся.
+     */
+    fun unlinkTask(task: CalendarTask, hiveUuid: String) {
+        viewModelScope.launch {
+            val hive = repository.observeHive(hiveId).firstOrNull() ?: return@launch
+            if (hive.uuid != hiveUuid) return@launch
+            val updated = task.copy(
+                linkedHiveUuids = task.linkedHiveUuids - hiveUuid,
+                updatedAt = System.currentTimeMillis()
+            )
+            calendarRepository.updateTask(updated)
+        }
     }
 }
