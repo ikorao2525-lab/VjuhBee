@@ -22,6 +22,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -48,6 +51,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vjuhbee.beecalc.R
 import com.vjuhbee.beecalc.model.CalendarTask
 import com.vjuhbee.beecalc.model.Hive
+import com.vjuhbee.beecalc.model.HarvestItem
+import com.vjuhbee.beecalc.model.HarvestProduct
+import com.vjuhbee.beecalc.model.HarvestUnit
 import com.vjuhbee.beecalc.model.Importance
 import com.vjuhbee.beecalc.model.TaskCategory
 import com.vjuhbee.beecalc.model.YearHarvestTotals
@@ -475,13 +481,7 @@ private fun TaskEditorDialog(
     var linkedUuids by remember {
         mutableStateOf(editor.task.linkedHiveUuids.toSet())
     }
-    var honeyKgText by remember { mutableStateOf(editor.task.honeyKg.toAmountText()) }
-    var honeyLitersText by remember { mutableStateOf(editor.task.honeyLiters.toAmountText()) }
-    var pollenText by remember { mutableStateOf(editor.task.pollenKg.toAmountText()) }
-    var beeBreadText by remember { mutableStateOf(editor.task.beeBreadKg.toAmountText()) }
-    var propolisText by remember { mutableStateOf(editor.task.propolisGrams.toAmountText()) }
-    var waxText by remember { mutableStateOf(editor.task.waxKg.toAmountText()) }
-    var royalJellyText by remember { mutableStateOf(editor.task.royalJellyGrams.toAmountText()) }
+    var harvestDrafts by remember { mutableStateOf(editor.task.harvestItems.map { HarvestDraft(it.product, formatAmount(it.amount), it.unit) }) }
     var confirmDelete by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -578,20 +578,28 @@ private fun TaskEditorDialog(
                     }
                 }
 
-                // Сбор продукции — необязательные поля, доступны для любой работы
-                // (пыльцу или прополис можно собрать и в день «Ухода»).
-                Text(
+Text(
                     text = stringResource(R.string.editor_harvest_section),
                     style = MaterialTheme.typography.titleMedium
                 )
-                HarvestField(honeyKgText, { honeyKgText = it }, R.string.editor_honey_kg)
-                HarvestField(honeyLitersText, { honeyLitersText = it }, R.string.editor_honey_l)
-                HarvestField(pollenText, { pollenText = it }, R.string.editor_pollen)
-                HarvestField(beeBreadText, { beeBreadText = it }, R.string.editor_bee_bread)
-                HarvestField(propolisText, { propolisText = it }, R.string.editor_propolis)
-                HarvestField(waxText, { waxText = it }, R.string.editor_wax)
-                HarvestField(royalJellyText, { royalJellyText = it }, R.string.editor_royal_jelly)
-
+                Text(
+                    text = stringResource(R.string.editor_harvest_hint),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                harvestDrafts.forEachIndexed { index, draft ->
+                    HarvestDraftRow(
+                        draft = draft,
+                        onChange = { harvestDrafts = harvestDrafts.toMutableList().also { it[index] = draft.copy(product = it[index].product, amountText = it[index].amountText, unit = it[index].unit) } },
+                        onProductChange = { product -> harvestDrafts = harvestDrafts.toMutableList().also { it[index] = draft.copy(product = product, unit = if (product == HarvestProduct.HONEY) draft.unit else product.defaultUnit) } },
+                        onAmountChange = { value -> harvestDrafts = harvestDrafts.toMutableList().also { it[index] = draft.copy(amountText = value) } },
+                        onUnitChange = { unit -> harvestDrafts = harvestDrafts.toMutableList().also { it[index] = draft.copy(unit = unit) } },
+                        onRemove = { harvestDrafts = harvestDrafts.toMutableList().also { it.removeAt(index) } }
+                    )
+                }
+                OutlinedButton(
+                    onClick = { harvestDrafts = harvestDrafts + HarvestDraft(HarvestProduct.HONEY, "", HarvestUnit.KG) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                ) { Text(stringResource(R.string.editor_add_harvest)) }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = stringResource(R.string.calendar_important),
@@ -611,13 +619,7 @@ private fun TaskEditorDialog(
                                 month = month,
                                 category = category,
                                 importance = if (isImportant) Importance.HIGH else Importance.NORMAL,
-                                honeyKg = parseAmount(honeyKgText),
-                                honeyLiters = parseAmount(honeyLitersText),
-                                pollenKg = parseAmount(pollenText),
-                                beeBreadKg = parseAmount(beeBreadText),
-                                propolisGrams = parseAmount(propolisText),
-                                waxKg = parseAmount(waxText),
-                                royalJellyGrams = parseAmount(royalJellyText),
+                                harvestItems = harvestDrafts.mapNotNull { draft -> parseAmount(draft.amountText)?.let { HarvestItem(draft.product, it, draft.unit) } },
                                 linkedHiveUuids = linkedUuids.toList()
                             )
                         )
@@ -631,16 +633,16 @@ private fun TaskEditorDialog(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(
+                    OutlinedButton(
                         onClick = onDismiss,
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 48.dp)
+                            .heightIn(min = 56.dp)
                     ) {
-                        Text(stringResource(R.string.editor_cancel))
+                        Text(stringResource(R.string.editor_cancel), fontWeight = FontWeight.Bold)
                     }
                     if (!editor.isNew) {
-                        TextButton(
+                        OutlinedButton(
                             onClick = {
                                 if (confirmDelete) onDelete(editor.task) else confirmDelete = true
                             },
@@ -662,6 +664,96 @@ private fun TaskEditorDialog(
     }
 }
 
+private data class HarvestDraft(
+    val product: HarvestProduct,
+    val amountText: String,
+    val unit: HarvestUnit
+)
+
+@OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun HarvestDraftRow(
+    draft: HarvestDraft,
+    onChange: () -> Unit,
+    onProductChange: (HarvestProduct) -> Unit,
+    onAmountChange: (String) -> Unit,
+    onUnitChange: (HarvestUnit) -> Unit,
+    onRemove: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            var productExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = productExpanded,
+                onExpandedChange = { productExpanded = !productExpanded }
+            ) {
+                OutlinedTextField(
+                    value = harvestProductName(draft.product),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.editor_harvest_product)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(productExpanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = productExpanded,
+                    onDismissRequest = { productExpanded = false }
+                ) {
+                    HarvestProduct.entries.forEach { product ->
+                        DropdownMenuItem(
+                            text = { Text(harvestProductName(product)) },
+                            onClick = { onProductChange(product); productExpanded = false }
+                        )
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = draft.amountText,
+                onValueChange = onAmountChange,
+                label = { Text(stringResource(R.string.editor_harvest_amount)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (draft.product == HarvestProduct.HONEY) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(HarvestUnit.KG, HarvestUnit.LITER).forEach { unit ->
+                        FilterChip(
+                            selected = draft.unit == unit,
+                            onClick = { onUnitChange(unit) },
+                            label = { Text(stringResource(R.string.editor_harvest_unit_choice, unit.label)) }
+                        )
+                    }
+                }
+            } else {
+                Text(stringResource(R.string.editor_harvest_unit, draft.unit.label))
+            }
+            OutlinedButton(
+                onClick = onRemove,
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.error),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
+            ) {
+                Text(stringResource(R.string.editor_remove_harvest), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+private fun harvestProductName(product: HarvestProduct): String = when (product) {
+    HarvestProduct.HONEY -> "Мёд"
+    HarvestProduct.POLLEN -> "Пыльца"
+    HarvestProduct.BEE_BREAD -> "Перга"
+    HarvestProduct.PROPOLIS -> "Прополис"
+    HarvestProduct.WAX -> "Воск"
+    HarvestProduct.ROYAL_JELLY -> "Маточное молочко"
+    HarvestProduct.CAPPINGS -> "Забрус"
+    HarvestProduct.WAX_MERVA -> "Мерва"
+    HarvestProduct.BEE_VENOM -> "Пчелиный яд"
+    HarvestProduct.WINTER_BEES -> "Подмор"
+    HarvestProduct.QUEENS -> "Матки"
+    HarvestProduct.NUCLEUS_COLONIES -> "Отводки"
+    HarvestProduct.PACKAGE_BEES -> "Пчелопакеты"
+}
 /** Категория показывается текстом, не только цветом (SPEC.md §8). */
 @Composable
 private fun CategoryLabel(category: TaskCategory) {

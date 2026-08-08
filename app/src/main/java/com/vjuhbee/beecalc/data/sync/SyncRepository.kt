@@ -212,6 +212,16 @@ data class HiveConflict(
 private fun Hive.equalsFields(other: SyncHive): Boolean =
     name == other.name && note == other.note
 
+private fun legacyHarvestItems(honeyKg: Double?, honeyLiters: Double?, pollenKg: Double?, beeBreadKg: Double?, propolisGrams: Double?, waxKg: Double?, royalJellyGrams: Double?): List<com.vjuhbee.beecalc.model.HarvestItem> = buildList {
+    honeyKg?.takeIf { it > 0 }?.let { add(com.vjuhbee.beecalc.model.HarvestItem(com.vjuhbee.beecalc.model.HarvestProduct.HONEY, it, com.vjuhbee.beecalc.model.HarvestUnit.KG)) }
+    honeyLiters?.takeIf { it > 0 }?.let { add(com.vjuhbee.beecalc.model.HarvestItem(com.vjuhbee.beecalc.model.HarvestProduct.HONEY, it, com.vjuhbee.beecalc.model.HarvestUnit.LITER)) }
+    pollenKg?.takeIf { it > 0 }?.let { add(com.vjuhbee.beecalc.model.HarvestItem(com.vjuhbee.beecalc.model.HarvestProduct.POLLEN, it)) }
+    beeBreadKg?.takeIf { it > 0 }?.let { add(com.vjuhbee.beecalc.model.HarvestItem(com.vjuhbee.beecalc.model.HarvestProduct.BEE_BREAD, it)) }
+    propolisGrams?.takeIf { it > 0 }?.let { add(com.vjuhbee.beecalc.model.HarvestItem(com.vjuhbee.beecalc.model.HarvestProduct.PROPOLIS, it, com.vjuhbee.beecalc.model.HarvestUnit.GRAM)) }
+    waxKg?.takeIf { it > 0 }?.let { add(com.vjuhbee.beecalc.model.HarvestItem(com.vjuhbee.beecalc.model.HarvestProduct.WAX, it)) }
+    royalJellyGrams?.takeIf { it > 0 }?.let { add(com.vjuhbee.beecalc.model.HarvestItem(com.vjuhbee.beecalc.model.HarvestProduct.ROYAL_JELLY, it, com.vjuhbee.beecalc.model.HarvestUnit.GRAM)) }
+}
+
 private fun SyncTask.toModel() = CalendarTask(
     id = 0, year = year, month = month, title = title,
     shortDescription = shortDescription, fullDescription = fullDescription,
@@ -219,6 +229,7 @@ private fun SyncTask.toModel() = CalendarTask(
     importance = com.vjuhbee.beecalc.model.Importance.valueOf(importance),
     tags = if (tags.isBlank()) emptyList() else tags.split(","),
     isDone = isDone, isDeleted = isDeleted,
+    harvestItems = harvestItems.toHarvestItems().ifEmpty { legacyHarvestItems(honeyKg, honeyLiters, pollenKg, beeBreadKg, propolisGrams, waxKg, royalJellyGrams) },
     honeyKg = honeyKg, honeyLiters = honeyLiters,
     pollenKg = pollenKg, beeBreadKg = beeBreadKg,
     propolisGrams = propolisGrams, waxKg = waxKg, royalJellyGrams = royalJellyGrams,
@@ -233,6 +244,7 @@ private fun CalendarTask.copyFromSync(s: SyncTask) = copy(
     importance = com.vjuhbee.beecalc.model.Importance.valueOf(s.importance),
     tags = if (s.tags.isBlank()) emptyList() else s.tags.split(","),
     isDone = s.isDone, isDeleted = s.isDeleted,
+    harvestItems = s.harvestItems.toHarvestItems().ifEmpty { legacyHarvestItems(s.honeyKg, s.honeyLiters, s.pollenKg, s.beeBreadKg, s.propolisGrams, s.waxKg, s.royalJellyGrams) },
     honeyKg = s.honeyKg, honeyLiters = s.honeyLiters,
     pollenKg = s.pollenKg, beeBreadKg = s.beeBreadKg,
     propolisGrams = s.propolisGrams, waxKg = s.waxKg, royalJellyGrams = s.royalJellyGrams,

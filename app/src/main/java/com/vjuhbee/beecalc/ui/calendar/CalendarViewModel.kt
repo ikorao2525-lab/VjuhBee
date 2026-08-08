@@ -68,15 +68,21 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 years = (byYear.keys + currentYear).sortedDescending(),
                 tasksByYearMonth = byYear.mapValues { (_, yearTasks) -> yearTasks.groupBy { it.month } },
                 harvestByYear = byYear.mapValues { (_, yearTasks) ->
-                    YearHarvestTotals(
-                        honeyKg = yearTasks.sumOf { it.honeyKg ?: 0.0 },
-                        honeyLiters = yearTasks.sumOf { it.honeyLiters ?: 0.0 },
-                        pollenKg = yearTasks.sumOf { it.pollenKg ?: 0.0 },
-                        beeBreadKg = yearTasks.sumOf { it.beeBreadKg ?: 0.0 },
-                        propolisGrams = yearTasks.sumOf { it.propolisGrams ?: 0.0 },
-                        waxKg = yearTasks.sumOf { it.waxKg ?: 0.0 },
-                        royalJellyGrams = yearTasks.sumOf { it.royalJellyGrams ?: 0.0 }
-                    )
+                    yearTasks.flatMap { it.harvestItems }
+                        .groupBy { it.product to it.unit }
+                        .entries
+                        .fold(YearHarvestTotals()) { totals, (key, values) ->
+                            val amount = values.sumOf { it.amount }
+                            when (key.first) {
+                                com.vjuhbee.beecalc.model.HarvestProduct.HONEY -> if (key.second == com.vjuhbee.beecalc.model.HarvestUnit.LITER) totals.copy(honeyLiters = amount) else totals.copy(honeyKg = amount)
+                                com.vjuhbee.beecalc.model.HarvestProduct.POLLEN -> totals.copy(pollenKg = amount)
+                                com.vjuhbee.beecalc.model.HarvestProduct.BEE_BREAD -> totals.copy(beeBreadKg = amount)
+                                com.vjuhbee.beecalc.model.HarvestProduct.PROPOLIS -> totals.copy(propolisGrams = amount)
+                                com.vjuhbee.beecalc.model.HarvestProduct.WAX -> totals.copy(waxKg = amount)
+                                com.vjuhbee.beecalc.model.HarvestProduct.ROYAL_JELLY -> totals.copy(royalJellyGrams = amount)
+                                else -> totals
+                            }
+                        }
                 },
                 expandedYears = years,
                 expandedMonths = months,

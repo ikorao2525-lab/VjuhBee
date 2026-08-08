@@ -43,6 +43,7 @@ import com.vjuhbee.beecalc.ui.hives.HivesScreen
 import com.vjuhbee.beecalc.ui.hives.QrScannerScreen
 import com.vjuhbee.beecalc.ui.sync.SyncScreen
 import com.vjuhbee.beecalc.ui.tools.ToolsScreen
+import com.vjuhbee.beecalc.ui.reports.ReportsScreen
 import com.vjuhbee.beecalc.model.Hive
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vjuhbee.beecalc.utils.parseHiveQr
@@ -73,11 +74,11 @@ fun BeeCalcNavHost() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     var pendingImport by remember { mutableStateOf<QrHiveData?>(null) }
-    val showBottomBar = currentRoute != "about" && currentRoute != "qr-scan" && currentRoute != "sync"
+    val showBottomBar = currentRoute != "about" && currentRoute != "qr-scan" && currentRoute != "sync" && currentRoute != "reports"
     val showTopBar = currentRoute != "about" &&
         currentRoute?.startsWith("hive/") != true &&
         currentRoute != "qr-scan" &&
-        currentRoute != "sync"
+        currentRoute != "sync" && currentRoute != "reports"
 
     Scaffold(
         topBar = {
@@ -156,9 +157,11 @@ fun BeeCalcNavHost() {
             composable("tools") {
                 ToolsScreen(
                     onScanClick = { navController.navigate("qr-scan") },
-                    onSyncClick = { navController.navigate("sync") }
+                    onSyncClick = { navController.navigate("sync") },
+                    onReportsClick = { navController.navigate("reports") }
                 )
             }
+            composable("reports") { ReportsScreen(onBack = { navController.popBackStack() }) }
             composable("sync") {
                 SyncScreen(
                     onBack = { navController.popBackStack() },

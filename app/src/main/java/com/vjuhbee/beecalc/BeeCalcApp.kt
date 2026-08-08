@@ -17,7 +17,7 @@ class BeeCalcApp : Application() {
     val database: BeeCalcDatabase by lazy { BeeCalcDatabase.build(this) }
 
     val calendarRepository: CalendarRepository by lazy {
-        RoomCalendarRepository(database.calendarTaskDao())
+        RoomCalendarRepository(database.calendarTaskDao(), database.harvestItemDao())
     }
 
     val hiveRepository: HiveRepository by lazy {

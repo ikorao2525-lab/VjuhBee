@@ -4,4 +4,5 @@
 <paths>
     <cache-path name="shared_qr" path="qr/" />
     <cache-path name="shared_sync" path="sync/" />
+    <cache-path name="shared_reports" path="reports/" />
 </paths>

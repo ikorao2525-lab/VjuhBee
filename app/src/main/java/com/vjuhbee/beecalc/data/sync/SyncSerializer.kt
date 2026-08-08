@@ -71,6 +71,7 @@ object SyncSerializer {
                     put("propolisGrams", it.propolisGrams ?: JSONObject.NULL)
                     put("waxKg", it.waxKg ?: JSONObject.NULL)
                     put("royalJellyGrams", it.royalJellyGrams ?: JSONObject.NULL)
+                    put("harvestItems", it.harvestItems)
                     put("linkedHiveUuids", it.linkedHiveUuids)
                     put("updatedAt", it.updatedAt)
                 })
@@ -141,6 +142,7 @@ object SyncSerializer {
                 propolisGrams = optNullableDouble(o, "propolisGrams"),
                 waxKg = optNullableDouble(o, "waxKg"),
                 royalJellyGrams = optNullableDouble(o, "royalJellyGrams"),
+                harvestItems = o.optString("harvestItems", ""),
                 linkedHiveUuids = o.optString("linkedHiveUuids", ""),
                 updatedAt = o.optLong("updatedAt", 0L)
             )

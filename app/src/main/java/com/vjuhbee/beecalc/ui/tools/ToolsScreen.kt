@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
@@ -30,7 +31,8 @@ import com.vjuhbee.beecalc.R
 @Composable
 fun ToolsScreen(
     onScanClick: () -> Unit,
-    onSyncClick: () -> Unit
+    onSyncClick: () -> Unit,
+    onReportsClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -56,6 +58,19 @@ fun ToolsScreen(
                 )
             },
             onClick = onScanClick
+        )
+        ToolCard(
+            title = stringResource(R.string.tools_reports_title),
+            description = stringResource(R.string.tools_reports_desc),
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.Assessment,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            onClick = onReportsClick
         )
         ToolCard(
             title = stringResource(R.string.tools_sync_title),

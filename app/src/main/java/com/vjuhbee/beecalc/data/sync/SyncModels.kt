@@ -4,6 +4,9 @@ import com.vjuhbee.beecalc.model.CalendarTask
 import com.vjuhbee.beecalc.model.Hive
 import com.vjuhbee.beecalc.model.Inspection
 import com.vjuhbee.beecalc.model.Treatment
+import com.vjuhbee.beecalc.model.HarvestItem
+import com.vjuhbee.beecalc.model.HarvestProduct
+import com.vjuhbee.beecalc.model.HarvestUnit
 
 /**
  * Переносимые представления данных пасеки (SPEC.md §9, v0.4).
@@ -70,6 +73,7 @@ data class SyncTask(
     val propolisGrams: Double?,
     val waxKg: Double?,
     val royalJellyGrams: Double?,
+    val harvestItems: String = "",
     val linkedHiveUuids: String,
     val updatedAt: Long
 )
@@ -96,6 +100,17 @@ fun CalendarTask.toSync() = SyncTask(
     honeyKg = honeyKg, honeyLiters = honeyLiters,
     pollenKg = pollenKg, beeBreadKg = beeBreadKg,
     propolisGrams = propolisGrams, waxKg = waxKg, royalJellyGrams = royalJellyGrams,
+    harvestItems = harvestItems.toSyncValue(),
     linkedHiveUuids = linkedHiveUuids.joinToString(","),
     updatedAt = updatedAt
 )
+
+fun List<HarvestItem>.toSyncValue(): String = joinToString(";") { "${it.product.code},${it.amount},${it.unit.code}" }
+
+fun String.toHarvestItems(): List<HarvestItem> = split(';').mapNotNull { row ->
+    val parts = row.split(',')
+    if (parts.size != 3) return@mapNotNull null
+    val product = HarvestProduct.entries.firstOrNull { it.code == parts[0] } ?: return@mapNotNull null
+    val unit = HarvestUnit.entries.firstOrNull { it.code == parts[2] } ?: return@mapNotNull null
+    parts[1].toDoubleOrNull()?.takeIf { it > 0 }?.let { HarvestItem(product, it, unit) }
+}

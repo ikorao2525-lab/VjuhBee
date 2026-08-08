@@ -18,15 +18,17 @@ import java.util.Calendar
         CalendarTaskEntity::class,
         HiveEntity::class,
         InspectionEntity::class,
-        TreatmentEntity::class
+        TreatmentEntity::class,
+        HarvestItemEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class BeeCalcDatabase : RoomDatabase() {
 
     abstract fun calendarTaskDao(): CalendarTaskDao
     abstract fun hiveDao(): HiveDao
+    abstract fun harvestItemDao(): HarvestItemDao
 
     companion object {
 
@@ -188,11 +190,25 @@ abstract class BeeCalcDatabase : RoomDatabase() {
             }
         }
 
+        /** v8 → v9: отдельные позиции собранной продукции. */
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS harvest_items (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, taskUuid TEXT NOT NULL, product TEXT NOT NULL, amount REAL NOT NULL, unit TEXT NOT NULL)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_harvest_items_taskUuid ON harvest_items(taskUuid)")
+                db.execSQL("INSERT INTO harvest_items (taskUuid, product, amount, unit) SELECT uuid, 'honey', honeyKg, 'kg' FROM calendar_tasks WHERE honeyKg IS NOT NULL AND honeyKg > 0")
+                db.execSQL("INSERT INTO harvest_items (taskUuid, product, amount, unit) SELECT uuid, 'honey', honeyLiters, 'l' FROM calendar_tasks WHERE honeyLiters IS NOT NULL AND honeyLiters > 0")
+                db.execSQL("INSERT INTO harvest_items (taskUuid, product, amount, unit) SELECT uuid, 'pollen', pollenKg, 'kg' FROM calendar_tasks WHERE pollenKg IS NOT NULL AND pollenKg > 0")
+                db.execSQL("INSERT INTO harvest_items (taskUuid, product, amount, unit) SELECT uuid, 'bee_bread', beeBreadKg, 'kg' FROM calendar_tasks WHERE beeBreadKg IS NOT NULL AND beeBreadKg > 0")
+                db.execSQL("INSERT INTO harvest_items (taskUuid, product, amount, unit) SELECT uuid, 'propolis', propolisGrams, 'g' FROM calendar_tasks WHERE propolisGrams IS NOT NULL AND propolisGrams > 0")
+                db.execSQL("INSERT INTO harvest_items (taskUuid, product, amount, unit) SELECT uuid, 'wax', waxKg, 'kg' FROM calendar_tasks WHERE waxKg IS NOT NULL AND waxKg > 0")
+                db.execSQL("INSERT INTO harvest_items (taskUuid, product, amount, unit) SELECT uuid, 'royal_jelly', royalJellyGrams, 'g' FROM calendar_tasks WHERE royalJellyGrams IS NOT NULL AND royalJellyGrams > 0")
+            }
+        }
         fun build(context: Context): BeeCalcDatabase =
             Room.databaseBuilder(context, BeeCalcDatabase::class.java, "beecalc.db")
                 .addMigrations(
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8
+                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
                 )
                 .build()
     }

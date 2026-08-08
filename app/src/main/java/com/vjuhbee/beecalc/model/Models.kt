@@ -36,6 +36,30 @@ enum class Importance {
     HIGH
 }
 
+/** Вид продукции, стабильный код хранится в базе и файле синхронизации. */
+enum class HarvestProduct(val code: String, val defaultUnit: HarvestUnit) {
+    HONEY("honey", HarvestUnit.KG),
+    POLLEN("pollen", HarvestUnit.KG),
+    BEE_BREAD("bee_bread", HarvestUnit.KG),
+    PROPOLIS("propolis", HarvestUnit.GRAM),
+    WAX("wax", HarvestUnit.KG),
+    ROYAL_JELLY("royal_jelly", HarvestUnit.GRAM),
+    CAPPINGS("cappings", HarvestUnit.KG),
+    WAX_MERVA("wax_merva", HarvestUnit.KG),
+    BEE_VENOM("bee_venom", HarvestUnit.GRAM),
+    WINTER_BEES("winter_bees", HarvestUnit.KG),
+    QUEENS("queens", HarvestUnit.PIECE),
+    NUCLEUS_COLONIES("nucleus_colonies", HarvestUnit.PIECE),
+    PACKAGE_BEES("package_bees", HarvestUnit.PIECE)
+}
+
+enum class HarvestUnit(val code: String, val label: String) { KG("kg", "кг"), LITER("l", "л"), GRAM("g", "г"), PIECE("piece", "шт") }
+
+data class HarvestItem(
+    val product: HarvestProduct,
+    val amount: Double,
+    val unit: HarvestUnit = product.defaultUnit
+)
 /**
  * Работа в сезонном календаре (SPEC.md §5.2).
  * У каждого года — свой набор работ: в новом году список копируется
@@ -54,14 +78,15 @@ data class CalendarTask(
     val tags: List<String> = emptyList(),
     val isDone: Boolean = false,
     val isDeleted: Boolean = false,
-    /** Сбор продукции с пасеки (все поля необязательные). */
-    val honeyKg: Double? = null,
-    val honeyLiters: Double? = null,
-    val pollenKg: Double? = null,          // цветочная пыльца (обножка)
-    val beeBreadKg: Double? = null,        // перга
-    val propolisGrams: Double? = null,     // прополис — обычно граммы
-    val waxKg: Double? = null,             // воск
-    val royalJellyGrams: Double? = null,   // маточное молочко — обычно граммы
+    /** Список фактически собранной продукции. */
+    val harvestItems: List<HarvestItem> = emptyList(),
+    @Deprecated("Use harvestItems") val honeyKg: Double? = null,
+    @Deprecated("Use harvestItems") val honeyLiters: Double? = null,
+    @Deprecated("Use harvestItems") val pollenKg: Double? = null,
+    @Deprecated("Use harvestItems") val beeBreadKg: Double? = null,
+    @Deprecated("Use harvestItems") val propolisGrams: Double? = null,
+    @Deprecated("Use harvestItems") val waxKg: Double? = null,
+    @Deprecated("Use harvestItems") val royalJellyGrams: Double? = null,
     /**
      * Привязка работы к ульям (SPEC.md §5.2, v0.5).
      * Список **uuid** ульев (не внутренних id — они различаются между
