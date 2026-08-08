@@ -23,7 +23,8 @@ BeeCalc работает по принципу offline-first: основные �
 ## Текущая версия
 
 - Версия: `0.8.0-alpha`
-- Канал: `alpha`
+- Канал разработки: `alpha`
+- Статус сборки: тестовая версия для распространения
 - Android: минимум Android 9 (API 28)
 - Основная ветка стабильных тестовых сборок: `beta`
 - Ветка новых экспериментов: `alpha`
@@ -40,7 +41,9 @@ $env:ANDROID_HOME = "C:\Users\jukle\AppData\Local\Android\Sdk"
 
 APK:
 
-`app/build/outputs/apk/beta/debug/app-beta-debug.apk`
+`dist/BeeCalc_v0.8.0-alpha-test.apk`
+
+Исходный файл Gradle: `app/build/outputs/apk/beta/debug/app-beta-debug.apk`
 
 Установка через ADB:
 
