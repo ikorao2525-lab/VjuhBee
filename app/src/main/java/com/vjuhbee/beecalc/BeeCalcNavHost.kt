@@ -35,6 +35,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import android.net.Uri
 import com.vjuhbee.beecalc.ui.about.AboutScreen
 import com.vjuhbee.beecalc.ui.calculator.CalculatorScreen
 import com.vjuhbee.beecalc.ui.calendar.CalendarScreen
@@ -162,6 +163,15 @@ fun BeeCalcNavHost() {
                 )
             }
             composable("reports") { ReportsScreen(onBack = { navController.popBackStack() }) }
+            composable(
+                route = "reports/{hiveUuid}",
+                arguments = listOf(navArgument("hiveUuid") { type = NavType.StringType })
+            ) { entry ->
+                ReportsScreen(
+                    initialHiveUuid = entry.arguments?.getString("hiveUuid"),
+                    onBack = { navController.popBackStack() }
+                )
+            }
             composable("sync") {
                 SyncScreen(
                     onBack = { navController.popBackStack() },
@@ -195,6 +205,7 @@ fun BeeCalcNavHost() {
                 arguments = listOf(navArgument("hiveId") { type = NavType.IntType })
             ) {
                 HiveDetailScreen(
+                    onQuickReport = { hiveUuid -> navController.navigate("reports/${Uri.encode(hiveUuid)}") },
                     onBack = { navController.popBackStack() }
                 )
             }

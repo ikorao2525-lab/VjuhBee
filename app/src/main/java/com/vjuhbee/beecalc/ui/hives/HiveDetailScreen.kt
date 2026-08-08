@@ -72,6 +72,7 @@ import com.vjuhbee.beecalc.utils.saveQrToCache
  */
 @Composable
 fun HiveDetailScreen(
+    onQuickReport: (String) -> Unit,
     onBack: () -> Unit,
     viewModel: HiveDetailViewModel = viewModel()
 ) {
@@ -119,6 +120,12 @@ fun HiveDetailScreen(
 
         item(key = "actions") {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { onQuickReport(hive.uuid) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                ) {
+                    Text(stringResource(R.string.hive_quick_report))
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = { viewModel.openDialog(HiveDialog.AddInspection) },
@@ -181,6 +188,15 @@ fun HiveDetailScreen(
                     }
                 }
             }
+        }
+
+        item(key = "quick_summary") {
+            QuickHiveSummary(
+                inspections = state.inspections.size,
+                treatments = state.treatments.size,
+                tasks = state.linkedTasks.size,
+                harvestItems = state.linkedTasks.flatMap { it.harvestItems }
+            )
         }
 
         item(key = "linked_tasks_title") {
@@ -273,6 +289,28 @@ fun HiveDetailScreen(
             },
             onDismiss = { selectedTask = null }
         )
+    }
+}
+
+@Composable
+private fun QuickHiveSummary(
+    inspections: Int,
+    treatments: Int,
+    tasks: Int,
+    harvestItems: List<com.vjuhbee.beecalc.model.HarvestItem>
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Сводка улья", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("Работ: $tasks · осмотров: $inspections · обработок: $treatments")
+            if (harvestItems.isEmpty()) {
+                Text("Урожай: пока нет данных")
+            } else {
+                harvestItems.groupBy { it.product to it.unit }.forEach { (key, items) ->
+                    Text("${key.first.code}: ${items.sumOf { it.amount }} ${key.second.label}")
+                }
+            }
+        }
     }
 }
 

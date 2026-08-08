@@ -8,6 +8,8 @@ import com.vjuhbee.beecalc.model.CalendarTask
 import com.vjuhbee.beecalc.model.Hive
 import com.vjuhbee.beecalc.model.Inspection
 import com.vjuhbee.beecalc.model.HarvestItem
+import com.vjuhbee.beecalc.model.HarvestProduct
+import com.vjuhbee.beecalc.model.HarvestUnit
 import com.vjuhbee.beecalc.model.Treatment
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,7 +32,14 @@ data class ReportData(
     val tasks: List<CalendarTask>,
     val inspections: List<Inspection>,
     val treatments: List<Treatment>,
-    val harvestTotals: List<HarvestItem> = emptyList()
+    val harvestTotals: List<HarvestSummary> = emptyList(),
+    val harvestByMonth: Map<Pair<Int, Int>, List<HarvestSummary>> = emptyMap()
+)
+
+data class HarvestSummary(
+    val product: HarvestProduct,
+    val unit: HarvestUnit,
+    val amount: Double
 )
 
 data class ReportsUiState(
@@ -86,11 +95,31 @@ class ReportsViewModel(app: Application) : AndroidViewModel(app) {
                     (hiveId == null || item.hiveId == hiveId) && item.date.inRange(range)
                 }
 ,
-                harvestTotals = records.tasks.filter { task -> !task.isDeleted && (kind == ReportKind.APIARY || hiveUuid in task.linkedHiveUuids) && task.monthStartMillis().inRange(range) }.flatMap { it.harvestItems }
+                harvestTotals = harvestItemsFor(records.tasks, kind, hiveUuid, range).summarize(),
+                harvestByMonth = harvestItemsFor(records.tasks, kind, hiveUuid, range).groupBy { it.first.year to it.first.month }
+                    .mapValues { (_, items) -> items.flatMap { it.second }.let { harvestItems -> harvestItems.groupBy { it.product to it.unit }.map { (key, values) -> HarvestSummary(key.first, key.second, values.sumOf { it.amount }) }.sortedWith(compareBy({ it.product.name }, { it.unit.code })) } }
             )
         )
     }
 
+    private fun harvestItemsFor(
+        tasks: List<CalendarTask>,
+        kind: ReportKind,
+        hiveUuid: String?,
+        range: ReportRange
+    ): List<Pair<CalendarTask, List<HarvestItem>>> = tasks
+        .filter { task ->
+            !task.isDeleted &&
+                (kind == ReportKind.APIARY || hiveUuid in task.linkedHiveUuids) &&
+                task.monthStartMillis().inRange(range)
+        }
+        .map { it to it.harvestItems }
+
+    private fun List<Pair<CalendarTask, List<HarvestItem>>>.summarize(): List<HarvestSummary> =
+        flatMap { it.second }
+            .groupBy { it.product to it.unit }
+            .map { (key, items) -> HarvestSummary(key.first, key.second, items.sumOf { it.amount }) }
+            .sortedWith(compareBy({ it.product.name }, { it.unit.code }))
     private data class Records(
         val hives: List<Hive> = emptyList(), val tasks: List<CalendarTask> = emptyList(),
         val inspections: List<Inspection> = emptyList(), val treatments: List<Treatment> = emptyList(),

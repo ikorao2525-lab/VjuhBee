@@ -124,6 +124,7 @@
 
     <!-- QR-код улья (v0.4) -->
     <string name="hive_show_qr">Показать QR</string>
+    <string name="hive_quick_report">Быстрый отчёт по улью</string>
     <string name="hive_qr_title">QR-код улья</string>
     <string name="hive_qr_hint">Наклейте этот QR на улей (минимум 5×5 см, матовая ламинация). Сканирование откроет улей в приложении.</string>
     <string name="hive_qr_share">Поделиться</string>
@@ -203,7 +204,8 @@
     <string name="reports_preview_tasks">Работ: %1$d</string>
     <string name="reports_preview_inspections">Осмотров: %1$d</string>
     <string name="reports_preview_treatments">Обработок: %1$d</string>
-    <string name="reports_preview_harvest">Сбор продукции: %1$d поз.</string>
+    <string name="reports_preview_harvest">Итого урожая: %1$d поз.</string>
+    <string name="reports_preview_harvest_monthly">Урожай по месяцам</string>
     <string name="reports_preview_note">Экспорт в PDF и печать добавим следующим этапом.</string>
     <string name="reports_task_done">Выполнено ✓</string>
     <string name="reports_task_pending">Не выполнено</string>

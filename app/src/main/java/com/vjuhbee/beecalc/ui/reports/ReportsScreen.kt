@@ -20,12 +20,14 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,7 +44,7 @@ import com.vjuhbee.beecalc.model.HarvestProduct
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ReportsScreen(onBack: () -> Unit, viewModel: ReportsViewModel = viewModel()) {
+fun ReportsScreen(initialHiveUuid: String? = null, onBack: () -> Unit, viewModel: ReportsViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var reportKind by remember { mutableStateOf(ReportKind.HIVE) }
     var period by remember { mutableStateOf(ReportPeriod.YEAR) }
@@ -50,6 +52,13 @@ fun ReportsScreen(onBack: () -> Unit, viewModel: ReportsViewModel = viewModel())
     var customEnd by remember { mutableStateOf<Long?>(null) }
     var datePickerTarget by remember { mutableStateOf<DatePickerTarget?>(null) }
     var showReportPage by remember { mutableStateOf(false) }
+
+    LaunchedEffect(initialHiveUuid) {
+        if (initialHiveUuid != null) {
+            reportKind = ReportKind.HIVE
+            viewModel.selectHive(initialHiveUuid)
+        }
+    }
 
     if (showReportPage && state.report != null) {
         ReportPage(report = state.report!!, kind = reportKind, onBack = { showReportPage = false })
@@ -208,20 +217,35 @@ Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spac
         )
         Text(stringResource(R.string.reports_preview_period, report.range.label))
         Text(stringResource(R.string.reports_preview_harvest, report.harvestTotals.size), fontWeight = FontWeight.Bold)
-        report.harvestTotals.forEach { item ->
-            Text(harvestProductName(item.product) + ": " + item.amount.toString() + " " + item.unit.label)
+        report.harvestTotals.forEach { summary ->
+            Text(harvestProductName(summary.product) + ": " + summary.amount.toString() + " " + summary.unit.label)
         }
-Text(stringResource(R.string.reports_preview_tasks, report.tasks.size), fontWeight = FontWeight.Bold)
+Text(stringResource(R.string.reports_preview_harvest_monthly), fontWeight = FontWeight.Bold)
+        report.harvestByMonth.toSortedMap(compareByDescending<Pair<Int, Int>> { it.first }.thenBy { it.second }).forEach { (month, summaries) ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    MonthSectionHeader(reportMonthLabel(month.first, month.second))
+                    summaries.forEach { summary ->
+                        Text(harvestProductName(summary.product) + ": " + summary.amount.toString() + " " + summary.unit.label)
+                    }
+                }
+            }
+        }
+        Text(stringResource(R.string.reports_preview_tasks, report.tasks.size), fontWeight = FontWeight.Bold)
         report.tasks.groupBy { it.year to it.month }.toSortedMap(compareByDescending<Pair<Int, Int>> { it.first }.thenBy { it.second }).forEach { (key, tasks) ->
-            Text(reportMonthLabel(key.first, key.second), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            tasks.forEach { task ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(task.title, fontWeight = FontWeight.Bold)
-                        if (task.shortDescription.isNotBlank()) Text(task.shortDescription)
-                        Text(if (task.isDone) stringResource(R.string.reports_task_done) else stringResource(R.string.reports_task_pending))
-                        task.harvestItems.forEach { item -> Text(harvestProductName(item.product) + ": " + item.amount.toString() + " " + item.unit.label) }
-                        task.fullDescription?.takeIf { it.isNotBlank() }?.let { Text(it) }
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MonthSectionHeader(reportMonthLabel(key.first, key.second))
+                    tasks.forEach { task ->
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(task.title, fontWeight = FontWeight.Bold)
+                                if (task.shortDescription.isNotBlank()) Text(task.shortDescription)
+                                Text(if (task.isDone) stringResource(R.string.reports_task_done) else stringResource(R.string.reports_task_pending))
+                                task.harvestItems.forEach { item -> Text(harvestProductName(item.product) + ": " + item.amount.toString() + " " + item.unit.label) }
+                                task.fullDescription?.takeIf { it.isNotBlank() }?.let { Text(it) }
+                            }
+                        }
                     }
                 }
             }
@@ -238,6 +262,24 @@ Text(stringResource(R.string.reports_preview_tasks, report.tasks.size), fontWeig
         }
     }
 }
+@Composable
+private fun MonthSectionHeader(label: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        HorizontalDivider(thickness = 2.dp, color = MaterialTheme.colorScheme.primary)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
 enum class DatePickerTarget { START, END }
 enum class ReportKind { HIVE, APIARY }
 enum class ReportPeriod { MONTH, QUARTER, HALF_YEAR, YEAR, ALL_TIME, CUSTOM }
