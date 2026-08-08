@@ -82,6 +82,7 @@ object SyncSerializer {
 
     fun decode(json: String): SyncFile {
         val root = JSONObject(json)
+        validateRoot(root)
         val hives = root.optJSONArray("hives") ?: JSONArray()
         val inspections = root.optJSONArray("inspections") ?: JSONArray()
         val treatments = root.optJSONArray("treatments") ?: JSONArray()
@@ -158,6 +159,21 @@ object SyncSerializer {
         )
     }
 
+private fun validateRoot(root: JSONObject) {
+        val version = root.optInt("version", 1)
+        require(version == 1) { "Неподдерживаемая версия файла: $version" }
+        listOf("hives", "inspections", "treatments", "tasks").forEach { key ->
+            require(root.optJSONArray(key) != null) { "В файле отсутствует раздел: $key" }
+        }
+        listOf("hives", "inspections", "treatments", "tasks").forEach { key ->
+            val array = root.getJSONArray(key)
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index)
+                require(item != null) { "Некорректная запись в разделе $key" }
+                require(item.optString("uuid").isNotBlank()) { "У записи $key нет uuid" }
+            }
+        }
+    }
     private fun optNullableString(o: JSONObject, key: String): String? =
         if (o.isNull(key)) null else o.optString(key, "")
 

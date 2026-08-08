@@ -25,6 +25,32 @@ object SyncFileUtils {
         return FileProvider.getUriForFile(context, authority, file)
     }
 
+
+    /** Сохраняет резервную копию текущей пасеки во внутреннем хранилище приложения. */
+    fun writeBackup(context: Context, json: String): File {
+        val dir = File(context.filesDir, "sync-backups").apply { mkdirs() }
+        val file = File(dir, "beecalc-backup-${System.currentTimeMillis()}.$EXT")
+        FileOutputStream(file).use { out -> out.write(json.toByteArray(Charsets.UTF_8)) }
+        return file
+    }
+
+    data class BackupInfo(val file: File) {
+        val name: String get() = file.name
+        val sizeBytes: Long get() = file.length()
+        val modifiedAt: Long get() = file.lastModified()
+    }
+
+    fun listBackups(context: Context): List<BackupInfo> =
+        File(context.filesDir, "sync-backups")
+            .listFiles { file -> file.isFile && file.extension == EXT }
+            ?.sortedByDescending { it.lastModified() }
+            ?.map(::BackupInfo)
+            ?: emptyList()
+
+    fun readBackup(info: BackupInfo): String? =
+        try { info.file.readText(Charsets.UTF_8) } catch (_: Exception) { null }
+
+    fun deleteBackup(info: BackupInfo): Boolean = info.file.delete()
     /** Читает содержимое файла (из URI) как текст. */
     fun readUri(context: Context, uri: Uri): String? =
         try {

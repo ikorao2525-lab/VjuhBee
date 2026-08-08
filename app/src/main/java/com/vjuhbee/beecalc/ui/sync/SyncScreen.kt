@@ -26,6 +26,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +41,7 @@ import com.vjuhbee.beecalc.data.sync.HiveConflict
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.text.DecimalFormat
 
 /**
  * Экран «Синхронизация пасеки» (SPEC.md §9, v0.4): офлайн-экспорт/импорт
@@ -53,11 +56,17 @@ fun SyncScreen(
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var backupsExpanded by remember { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let { viewModel.startImport(it) }
+    }
+
+    val backupSaveLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        val pending = viewModel.pendingBackup
+        if (uri != null && pending != null) viewModel.saveBackup(pending, uri)
     }
 
     val saveLauncher = rememberLauncherForActivityResult(
@@ -162,6 +171,27 @@ fun SyncScreen(
                     style = MaterialTheme.typography.bodyMedium
                 )
 
+Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { backupsExpanded = !backupsExpanded }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.sync_backups_toggle, state.backups.size, if (backupsExpanded) "▲" else "▼"))
+                        }
+                        if (backupsExpanded) {
+                            Text(stringResource(R.string.sync_backups_desc), style = MaterialTheme.typography.bodyMedium)
+                            if (state.backups.isEmpty()) Text(stringResource(R.string.sync_backups_empty))
+                            else state.backups.forEach { backup ->
+                                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(formatBackup(backup), modifier = Modifier.fillMaxWidth(), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                                        OutlinedButton(onClick = { viewModel.selectBackup(backup); backupSaveLauncher.launch("beecalc-backup.json") }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sync_backup_save)) }
+                                        OutlinedButton(onClick = { viewModel.restoreBackup(backup) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sync_backup_restore)) }
+                                        OutlinedButton(onClick = { viewModel.deleteBackup(backup) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sync_backup_delete)) }
+                                    }
+                                }
+                            }
+                            }
+                        }
+                    }
                 // Экспорт
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -232,6 +262,12 @@ fun SyncScreen(
     }
 }
 
+private fun formatBackup(backup: com.vjuhbee.beecalc.data.sync.SyncFileUtils.BackupInfo): String {
+    val date = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(backup.modifiedAt))
+    val size = DecimalFormat("#,##0").format(backup.sizeBytes)
+    return "$date · $size Б"
+}
+
 @Composable
 private fun SummaryContent(
     plan: com.vjuhbee.beecalc.data.sync.ImportPlan,
@@ -248,6 +284,9 @@ private fun SummaryContent(
             Text(stringResource(R.string.sync_summary_new, plan.totalNew))
             Text(stringResource(R.string.sync_summary_updated, plan.totalUpdated))
             Text(stringResource(R.string.sync_summary_conflicts, plan.totalConflicts))
+            Text(stringResource(R.string.sync_summary_breakdown, plan.newHives.size, plan.newInspections.size, plan.newTreatments.size, plan.newTasks.size))
+            Text(stringResource(R.string.sync_summary_updated_breakdown, plan.updatedInspections.size, plan.updatedTreatments.size, plan.updatedTasks.size))
+            Text(stringResource(R.string.sync_backup_notice), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             if (plan.totalConflicts > 0) {
                 Text(
                     text = stringResource(R.string.sync_warning_lost),

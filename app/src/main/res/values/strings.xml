@@ -162,6 +162,16 @@
     <string name="sync_summary_new">Новых записей: %1$d</string>
     <string name="sync_summary_updated">Изменённых: %1$d</string>
     <string name="sync_summary_conflicts">Конфликтов (нужно решить): %1$d</string>
+    <string name="sync_summary_breakdown">Новые: ульи %1$d, осмотры %2$d, обработки %3$d, работы %4$d</string>
+    <string name="sync_summary_updated_breakdown">Изменятся: осмотры %1$d, обработки %2$d, работы %3$d</string>
+    <string name="sync_backup_notice">Перед импортом создана резервная копия текущей пасеки.</string>
+    <string name="sync_backups_title">Резервные копии</string>
+    <string name="sync_backups_toggle">Резервные копии: %1$d %2$s</string>
+    <string name="sync_backups_desc">Копии хранятся внутри приложения и не видны в обычном файловом менеджере.</string>
+    <string name="sync_backups_empty">Резервных копий пока нет.</string>
+    <string name="sync_backup_save">Сохранить</string>
+    <string name="sync_backup_restore">Восстановить</string>
+    <string name="sync_backup_delete">Удалить</string>
     <string name="sync_warning_lost">Внимание: некоторые данные из файла или с этого телефона могут не попасть в итог, если появятся противоречия. Проверяйте внимательно.</string>
     <string name="sync_cancel">Отмена</string>
     <string name="sync_proceed">Дальше</string>

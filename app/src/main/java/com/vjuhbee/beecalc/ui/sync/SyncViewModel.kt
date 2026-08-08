@@ -2,6 +2,8 @@ package com.vjuhbee.beecalc.ui.sync
 
 import android.app.Application
 import android.net.Uri
+import android.content.Context
+import com.vjuhbee.beecalc.data.sync.SyncFileUtils.BackupInfo
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vjuhbee.beecalc.BeeCalcApp
@@ -32,7 +34,8 @@ data class SyncUiState(
     val exporting: Boolean = false,
     val importing: Boolean = false,
     val message: SyncMessage? = null,
-    val importedCount: Int = 0
+    val importedCount: Int = 0,
+    val backups: List<BackupInfo> = emptyList()
 )
 
 class SyncViewModel(app: Application) : AndroidViewModel(app) {
@@ -41,10 +44,18 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
     private val _uiState = MutableStateFlow(SyncUiState())
     val uiState: StateFlow<SyncUiState> = _uiState
 
+    init { refreshBackups() }
+
+    fun refreshBackups() {
+        _uiState.value = _uiState.value.copy(backups = SyncFileUtils.listBackups(getApplication()))
+    }
+
     private var file: SyncFile? = null
     private var plan: ImportPlan? = null
     private var conflictIndex = 0
     private val conflictChoices = mutableMapOf<String, Boolean>()
+    var pendingBackup: SyncFileUtils.BackupInfo? = null
+        private set
 
     fun consumeMessage() {
         _uiState.value = _uiState.value.copy(message = null)
@@ -113,6 +124,9 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
             }
             try {
                 val sf = SyncSerializer.decode(text)
+                val backup = SyncSerializer.encode(syncRepository.export())
+                SyncFileUtils.writeBackup(getApplication(), backup)
+                refreshBackups()
                 file = sf
                 val p = syncRepository.buildPlan(sf)
                 plan = p
@@ -125,7 +139,7 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     importing = false,
-                    message = SyncMessage.Error("Похоже, это не файл пасеки BeeCalc: ${e.message}")
+                    message = SyncMessage.Error("Файл не прошёл проверку: ${e.message ?: "повреждён или имеет неверный формат"}")
                 )
             }
         }
@@ -180,12 +194,51 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun restoreBackup(info: BackupInfo) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(importing = true)
+            try {
+                val text = SyncFileUtils.readBackup(info) ?: error("Не удалось прочитать копию")
+                val sf = SyncSerializer.decode(text)
+                file = sf
+                val p = syncRepository.buildPlan(sf)
+                plan = p
+                conflictIndex = 0
+                conflictChoices.clear()
+                _uiState.value = _uiState.value.copy(importing = false, step = ImportStep.Summary(p), backups = SyncFileUtils.listBackups(getApplication()))
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(importing = false, message = SyncMessage.Error("Копия не прошла проверку: ${e.message}"))
+            }
+        }
+    }
+
+    fun selectBackup(info: BackupInfo) { pendingBackup = info }
+
+    fun saveBackup(info: BackupInfo, uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val json = SyncFileUtils.readBackup(info) ?: error("Не удалось прочитать копию")
+                getApplication<Application>().contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+                _uiState.value = _uiState.value.copy(message = SyncMessage.Error("Резервная копия сохранена."))
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(message = SyncMessage.Error("Не удалось сохранить копию: ${e.message}"))
+            }
+            pendingBackup = null
+        }
+    }
+
+    fun deleteBackup(info: BackupInfo) {
+        if (SyncFileUtils.deleteBackup(info)) refreshBackups()
+    }
+
+    fun readBackup(info: BackupInfo): String? = SyncFileUtils.readBackup(info)
+
     fun reset() {
         file = null
         plan = null
         conflictIndex = 0
         conflictChoices.clear()
-        _uiState.value = SyncUiState()
+        _uiState.value = SyncUiState(backups = SyncFileUtils.listBackups(getApplication()))
     }
 
     fun backToSummary() {
