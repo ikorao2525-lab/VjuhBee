@@ -23,7 +23,7 @@
     <string name="home_critical">Критично</string>
     <string name="home_empty">На ближайшее время задач со сроком нет.</string>
     <string name="home_due_date">Срок: %1$s%2$s</string>
-    <string name="tab_calculator">Сироп</string>
+    <string name="tab_calculator">Калькуляторы</string>
     <string name="tab_calendar">Календарь</string>
     <string name="tab_hives">Ульи</string>
     <string name="tab_tools">Инструменты</string>
@@ -36,6 +36,24 @@
     <string name="calc_sugar_result">Сахар: %1$s кг</string>
     <string name="calc_water_result">Вода: %1$s л</string>
     <string name="calc_approximate_note">Расчёт приблизительный</string>
+    <string name="calculators_title">Калькуляторы</string>
+    <string name="calculator_syrup">Сахарный сироп</string>
+    <string name="calculator_syrup_description">Пропорции воды и сахара для заданного объёма.</string>
+    <string name="calculator_candi">Канди</string>
+    <string name="calculator_candi_description">Ориентировочный расчёт смеси сахара и мёда.</string>
+    <string name="calculator_winter">Зимние запасы корма</string>
+    <string name="calculator_winter_description">Планируется в следующем этапе.</string>
+    <string name="calculator_honey_jars">Мёд и количество банок</string>
+    <string name="calculator_honey_jars_description">Планируется в следующем этапе.</string>
+    <string name="calculator_open">Открыть</string>
+    <string name="calculator_planned">В планах</string>
+    <string name="calculator_back">Назад к калькуляторам</string>
+    <string name="candi_formula_note">Ориентировочная смесь: сахарная пудра и мёд. Расчёт не заменяет проверенный рецепт.</string>
+    <string name="candi_sugar">Сахар, кг</string>
+    <string name="candi_honey">Мёд, кг</string>
+    <string name="candi_result">Всего канди: %1$s кг</string>
+    <string name="candi_sugar_result">Сахар: %1$s кг</string>
+    <string name="candi_honey_result">Мёд: %1$s кг</string>
 
     <!-- Календарь -->
     <string name="calendar_region_note">Сроки работ — для средней полосы России. Всё можно изменить под свой регион: нажмите на работу, затем «Изменить».</string>

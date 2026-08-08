@@ -41,6 +41,8 @@ import androidx.navigation.navArgument
 import android.net.Uri
 import com.vjuhbee.beecalc.ui.about.AboutScreen
 import com.vjuhbee.beecalc.ui.calculator.CalculatorScreen
+import com.vjuhbee.beecalc.ui.calculator.CalculatorCatalogScreen
+import com.vjuhbee.beecalc.ui.calculator.CandiScreen
 import com.vjuhbee.beecalc.ui.calendar.CalendarScreen
 import com.vjuhbee.beecalc.ui.hives.HiveDetailScreen
 import com.vjuhbee.beecalc.ui.hives.HivesScreen
@@ -157,7 +159,9 @@ fun BeeCalcNavHost() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("home") { HomeScreen(onCalendarClick = { navController.navigate("calendar") }, onHivesClick = { navController.navigate("hives") }, onQrClick = { navController.navigate("qr-scan") }, onReportsClick = { navController.navigate("reports") }) }
-            composable("calculator") { CalculatorScreen() }
+            composable("calculator") { CalculatorCatalogScreen(onSyrupClick = { navController.navigate("calculator/syrup") }, onCandiClick = { navController.navigate("calculator/candi") }) }
+            composable("calculator/syrup") { CalculatorScreen() }
+            composable("calculator/candi") { CandiScreen(onBack = { navController.popBackStack() }) }
             composable("calendar") { CalendarScreen() }
             composable("hives") {
                 HivesScreen(
