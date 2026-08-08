@@ -91,7 +91,9 @@ class SyncRepository(
             newTasks = file.tasks.filter { it.uuid !in localTasksByUuid },
             updatedTasks = file.tasks.filter { remote ->
                 val local = localTasksByUuid[remote.uuid] ?: return@filter false
-                local.updatedAt < remote.updatedAt
+                // Активная задача из файла восстанавливает локальную задачу из корзины.
+                // Вместе с ней возвращаются linkedHiveUuids и остальные данные.
+                (local.isDeleted && !remote.isDeleted) || local.updatedAt < remote.updatedAt
             }
         )
     }

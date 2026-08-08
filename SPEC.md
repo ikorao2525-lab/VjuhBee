@@ -79,7 +79,7 @@
 
 ### Навигация
 - Navigation Compose 2.9.8 — используется с v0.1.
-- Нижняя навигация (Bottom Navigation Bar), 3 вкладки.
+- Нижняя навигация (Bottom Navigation Bar), 4 вкладки: Сироп, Календарь, Ульи, Инструменты.
 
 ### Архитектура
 - MVVM + StateFlow.
@@ -292,7 +292,7 @@
 
 ## 5. Экраны MVP (v0.1)
 
-Нижняя навигация через Navigation Compose, 3 вкладки:
+Нижняя навигация через Navigation Compose, 4 вкладки: Сироп, Календарь, Ульи, Инструменты.
 
 ### 5.1. Калькулятор
 
@@ -574,7 +574,7 @@ BeeCalcNavHost (startDestination = "calculator")
 - База v3 (миграция 2→3): таблицы hives, inspections, treatments,
   внешние ключи с ON DELETE CASCADE, индексы по hiveId.
 
-### Функции v0.4 (в работе)
+### Функции v0.4 (сделано)
 - Постоянный публичный id улья — **uuid** (миграция базы v5→v6):
   - `uuid TEXT NOT NULL` + уникальный индекс, генерируется UUID v4
     на месте через SQLite `randomblob` для уже существующих ульев;
@@ -582,7 +582,7 @@ BeeCalcNavHost (startDestination = "calculator")
   - переживает перенос базы на другой телефон, ляжет в основу QR-кодов.
 - **Далее (в работе):** генерация и показ QR (ZXing core), сканирование
   камерой (zxing-android-embedded), экран QR улья.
-- **Синхронизация пасеки (офлайн) — v0.4:** экспорт/импорт всего
+- **Синхронизация пасеки (офлайн) — v0.4 (сделано):** экспорт/импорт всего
   (ульи + осмотры + обработки + календарь) через JSON-файл; слияние по
   стабильному uuid, конфликты разрешаются пользователем.
 
@@ -728,7 +728,7 @@ CloudTips подключён: `https://pay.cloudtips.ru/p/99472576` (TIPS_URL в
 - [x] Многие-ко-многим: одна работа — несколько ульев, один улей — несколько работ.
 - [x] В карточке работы в календаре показываются имена привязанных ульев.
 - [x] На экране улья — короткий список привязанных работ (все годы, архив для
-  отчётности); по нажатию — переход в календарь на нужный год+месяц.
+  отчётности); по нажатию — read-only просмотр работы поверх экрана улья; есть отвязка без удаления работы.
 - [x] Привязка переносится при синхронизации пасеки (по uuid ульев).
 - Основа для отчётности (реализуется в v0.6).
 
@@ -757,7 +757,8 @@ CloudTips подключён: `https://pay.cloudtips.ru/p/99472576` (TIPS_URL в
 app/src/main/java/com/vjuhbee/beecalc/
 │
 ├── MainActivity.kt                    // Точка входа
-├── BeeCalcNavHost.kt                  // Навигация, вкладки (с v0.1)
+├── BeeCalcApp.kt                      // Application: БД и репозитории
+├── BeeCalcNavHost.kt                  // Навигация и нижняя панель
 │
 ├── ui/
 │   ├── theme/
@@ -813,8 +814,8 @@ app/src/main/java/com/vjuhbee/beecalc/
 - Коммит после каждого удачного шага.
 - Новая зависимость — только с записью в §3 этого файла.
 - Тестирование — на реальном устройстве (vivo iQOO 13),
-  **установку делает разработчик сам** (агент APK не ставит).
-- Разработка новых фич — на git-ветке `beta`; в `main` — стабильное.
+  APK для alpha/beta устанавливается через adb после подтверждения пользователя.
+- Новые исправления и тесты сначала делаются на git-ветке `alpha`; после проверки подтверждённые изменения переносятся в `beta`; в `main` — стабильный релиз.
 - Сборки: `./gradlew assembleBetaDebug` (бета),
   `assembleRustoreDebug`, `assemblePlayDebug`.
 - Целевая аудитория решений: «удобно ли в перчатках на солнце?».
@@ -842,10 +843,12 @@ app/src/main/java/com/vjuhbee/beecalc/
 
 ## 12. Сборка и установка (боевые команды, vivo-специфика)
 
-```bash
-./gradlew assembleDebug
-adb install -r --no-streaming app/build/outputs/apk/debug/app-debug.apk
-adb shell monkey -p com.vjuhbee.beecalc -c android.intent.category.LAUNCHER 1
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+$env:ANDROID_HOME = "C:\Users\jukle\AppData\Local\Android\Sdk"
+.\gradlew.bat :app:assembleBetaDebug
+& "$env:ANDROID_HOME\platform-tools\adb.exe" install -r --no-streaming app\build\outputs\apk\beta\debug\app-beta-debug.apk
+# beta applicationId: com.vjuhbee.beecalc.beta
 ```
 
 Особенности vivo:

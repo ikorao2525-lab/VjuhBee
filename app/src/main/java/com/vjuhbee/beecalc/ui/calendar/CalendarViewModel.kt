@@ -116,7 +116,14 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setDone(task: CalendarTask, done: Boolean) {
-        viewModelScope.launch { repository.updateTask(task.copy(isDone = done)) }
+        viewModelScope.launch {
+            repository.updateTask(
+                task.copy(
+                    isDone = done,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+        }
     }
 
     fun startAdd(year: Int, month: Int) {
