@@ -21,7 +21,7 @@ import java.util.Calendar
         TreatmentEntity::class,
         HarvestItemEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class BeeCalcDatabase : RoomDatabase() {
@@ -204,11 +204,17 @@ abstract class BeeCalcDatabase : RoomDatabase() {
                 db.execSQL("INSERT INTO harvest_items (taskUuid, product, amount, unit) SELECT uuid, 'royal_jelly', royalJellyGrams, 'g' FROM calendar_tasks WHERE royalJellyGrams IS NOT NULL AND royalJellyGrams > 0")
             }
         }
+        /** v9 → v10: необязательная точная дата выполнения работы. */
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE calendar_tasks ADD COLUMN dueDateMillis INTEGER")
+            }
+        }
         fun build(context: Context): BeeCalcDatabase =
             Room.databaseBuilder(context, BeeCalcDatabase::class.java, "beecalc.db")
                 .addMigrations(
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
+                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
                 )
                 .build()
     }

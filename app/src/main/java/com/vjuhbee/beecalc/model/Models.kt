@@ -70,6 +70,8 @@ data class CalendarTask(
     val id: Int,                         // 0 = новая, id выдаст база
     val year: Int = 0,                   // год выставляется при сохранении
     val month: Int,                      // 1..12
+    /** Необязательная дата выполнения, начало дня в системном часовом поясе. */
+    val dueDateMillis: Long? = null,
     val title: String,
     val shortDescription: String,
     val fullDescription: String? = null,

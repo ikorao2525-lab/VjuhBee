@@ -60,6 +60,7 @@ data class SyncTask(
     val uuid: String,
     val year: Int,
     val month: Int,
+    val dueDateMillis: Long? = null,
     val title: String,
     val shortDescription: String,
     val fullDescription: String?,
@@ -95,7 +96,7 @@ fun Treatment.toSync() = SyncTreatment(
 )
 
 fun CalendarTask.toSync() = SyncTask(
-    uuid = uuid, year = year, month = month, title = title,
+    uuid = uuid, year = year, month = month, dueDateMillis = dueDateMillis, title = title,
     shortDescription = shortDescription, fullDescription = fullDescription,
     category = category.name, importance = importance.name, tags = tags.joinToString(","),
     isDone = isDone, isDeleted = isDeleted,

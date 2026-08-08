@@ -4,6 +4,25 @@
     <string name="app_name_beta">BeeCalc β</string>
 
     <!-- Вкладки -->
+    <string name="tab_home">Главная</string>
+    <string name="home_title">Главная</string>
+    <string name="startup_choice_title">Начало работы</string>
+    <string name="startup_choice_text">Загрузить демонстрационную пасеку с примерами ульев, работ, осмотров и урожая?</string>
+    <string name="startup_empty">Пустая пасека</string>
+    <string name="startup_demo">Загрузить пример</string>
+    <string name="home_summary_title">Состояние пасеки</string>
+    <string name="home_hives_count">Ульев: %1$d</string>
+    <string name="home_undated_note">Есть работы без точной даты — они остаются в календаре по месяцу.</string>
+    <string name="home_quick_actions">Быстрые действия</string>
+    <string name="home_calendar">Календарь</string>
+    <string name="home_hives">Ульи</string>
+    <string name="home_qr">Сканировать QR</string>
+    <string name="home_reports">Отчёты</string>
+    <string name="home_upcoming">Скоро</string>
+    <string name="home_overdue">Просрочено</string>
+    <string name="home_critical">Критично</string>
+    <string name="home_empty">На ближайшее время задач со сроком нет.</string>
+    <string name="home_due_date">Срок: %1$s%2$s</string>
     <string name="tab_calculator">Сироп</string>
     <string name="tab_calendar">Календарь</string>
     <string name="tab_hives">Ульи</string>
@@ -49,6 +68,7 @@
     <string name="calendar_important">Важно</string>
     <string name="calendar_add_task">+ Добавить работу</string>
     <string name="calendar_edit_task">Изменить</string>
+    <string name="calendar_due_date">Срок: %1$s</string>
     <string name="calendar_trash_header">Удалённые работы (%1$d)</string>
     <string name="calendar_restore">Вернуть</string>
     <string name="calendar_delete_forever">Насовсем</string>
@@ -59,6 +79,10 @@
     <string name="editor_task_title">Название</string>
     <string name="editor_short_description">Короткое описание</string>
     <string name="editor_full_description">Полное описание (необязательно)</string>
+    <string name="editor_due_date_add">Указать дату выполнения</string>
+    <string name="editor_due_date_value">Дата выполнения: %1$s</string>
+    <string name="editor_due_date_clear">Очистить дату</string>
+    <string name="editor_due_date_confirm">Выбрать дату</string>
     <string name="editor_category">Категория</string>
     <string name="editor_hives_section">Привязать работу к улью (тапните по названию улья):</string>
     <string name="editor_save">Сохранить</string>

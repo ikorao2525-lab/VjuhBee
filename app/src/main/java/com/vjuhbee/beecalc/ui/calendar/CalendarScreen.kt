@@ -19,6 +19,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +59,9 @@ import com.vjuhbee.beecalc.model.HarvestUnit
 import com.vjuhbee.beecalc.model.Importance
 import com.vjuhbee.beecalc.model.TaskCategory
 import com.vjuhbee.beecalc.model.YearHarvestTotals
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Сезонный календарь работ (SPEC.md §5.2).
@@ -348,6 +353,9 @@ private fun TaskCard(
                         MaterialTheme.colorScheme.onSurface
                     }
                 )
+                task.dueDateMillis?.let { dueDate ->
+                    Text(stringResource(R.string.calendar_due_date, formatDueDate(dueDate)) + dueStatus(dueDate).label(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
                 Text(
                     text = task.shortDescription,
                     style = MaterialTheme.typography.bodyLarge,
@@ -462,7 +470,7 @@ private fun TrashCard(
 }
 
 /** Диалог добавления/редактирования работы. */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun TaskEditorDialog(
     editor: TaskEditor,
@@ -476,6 +484,8 @@ private fun TaskEditorDialog(
     var shortDescription by remember { mutableStateOf(editor.task.shortDescription) }
     var fullDescription by remember { mutableStateOf(editor.task.fullDescription.orEmpty()) }
     var month by remember { mutableStateOf(editor.task.month) }
+    var dueDateMillis by remember { mutableStateOf(editor.task.dueDateMillis) }
+    var showDueDatePicker by remember { mutableStateOf(false) }
     var category by remember { mutableStateOf(editor.task.category) }
     var isImportant by remember { mutableStateOf(editor.task.importance == Importance.HIGH) }
     var linkedUuids by remember {
@@ -538,6 +548,23 @@ private fun TaskEditorDialog(
                         onClick = { month = if (month == 12) 1 else month + 1 },
                         modifier = Modifier.heightIn(min = 48.dp)
                     ) { Text("▶") }
+                }
+
+                OutlinedButton(onClick = { showDueDatePicker = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text(if (dueDateMillis == null) stringResource(R.string.editor_due_date_add) else stringResource(R.string.editor_due_date_value, formatDueDate(dueDateMillis!!)))
+                }
+                if (dueDateMillis != null) {
+                    TextButton(onClick = { dueDateMillis = null }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.editor_due_date_clear))
+                    }
+                }
+                if (showDueDatePicker) {
+                    val pickerState = androidx.compose.material3.rememberDatePickerState(initialSelectedDateMillis = dueDateMillis)
+                    DatePickerDialog(onDismissRequest = { showDueDatePicker = false }, confirmButton = {
+                        TextButton(onClick = { dueDateMillis = pickerState.selectedDateMillis; showDueDatePicker = false }) { Text(stringResource(R.string.editor_due_date_confirm)) }
+                    }, dismissButton = {
+                        TextButton(onClick = { showDueDatePicker = false }) { Text(stringResource(R.string.editor_cancel)) }
+                    }) { DatePicker(state = pickerState) }
                 }
 
                 Text(
@@ -617,6 +644,7 @@ Text(
                                 shortDescription = shortDescription.trim(),
                                 fullDescription = fullDescription.trim().ifBlank { null },
                                 month = month,
+                                dueDateMillis = dueDateMillis,
                                 category = category,
                                 importance = if (isImportant) Importance.HIGH else Importance.NORMAL,
                                 harvestItems = harvestDrafts.mapNotNull { draft -> parseAmount(draft.amountText)?.let { HarvestItem(draft.product, it, draft.unit) } },
@@ -872,3 +900,5 @@ private fun categoryNameRes(category: TaskCategory): Int = when (category) {
     TaskCategory.SEASONAL -> R.string.category_seasonal
     TaskCategory.OTHER -> R.string.category_other
 }
+
+private fun formatDueDate(millis: Long): String = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(millis))

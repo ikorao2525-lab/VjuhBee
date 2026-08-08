@@ -58,6 +58,7 @@ object SyncSerializer {
                     put("uuid", it.uuid)
                     put("year", it.year)
                     put("month", it.month)
+                    put("dueDateMillis", it.dueDateMillis ?: JSONObject.NULL)
                     put("title", it.title)
                     put("shortDescription", it.shortDescription)
                     put("fullDescription", it.fullDescription ?: JSONObject.NULL)
@@ -130,6 +131,7 @@ object SyncSerializer {
                 uuid = o.getString("uuid"),
                 year = o.optInt("year", 0),
                 month = o.optInt("month", 0),
+                dueDateMillis = if (o.isNull("dueDateMillis")) null else o.optLong("dueDateMillis"),
                 title = o.optString("title", ""),
                 shortDescription = o.optString("shortDescription", ""),
                 fullDescription = optNullableString(o, "fullDescription"),

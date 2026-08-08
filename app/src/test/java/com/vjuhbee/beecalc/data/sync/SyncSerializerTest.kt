@@ -57,4 +57,17 @@ class SyncModelsTest {
 
         assertEquals("", task.toSync().linkedHiveUuids)
     }
+    @Test
+    fun taskMappingPreservesDueDate() {
+        val source = CalendarTask(
+            id = 0,
+            month = 8,
+            title = "Due date",
+            shortDescription = "",
+            category = TaskCategory.OTHER,
+            dueDateMillis = 1_754_000_000_000L
+        )
+
+        assertEquals(source.dueDateMillis, source.toSync().dueDateMillis)
+    }
 }

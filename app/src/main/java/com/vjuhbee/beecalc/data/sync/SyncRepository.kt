@@ -227,7 +227,7 @@ private fun legacyHarvestItems(honeyKg: Double?, honeyLiters: Double?, pollenKg:
 }
 
 private fun SyncTask.toModel() = CalendarTask(
-    id = 0, year = year, month = month, title = title,
+    id = 0, year = year, month = month, dueDateMillis = dueDateMillis, title = title,
     shortDescription = shortDescription, fullDescription = fullDescription,
     category = com.vjuhbee.beecalc.model.TaskCategory.valueOf(category),
     importance = com.vjuhbee.beecalc.model.Importance.valueOf(importance),
@@ -242,7 +242,7 @@ private fun SyncTask.toModel() = CalendarTask(
 )
 
 private fun CalendarTask.copyFromSync(s: SyncTask) = copy(
-    year = s.year, month = s.month, title = s.title,
+    year = s.year, month = s.month, dueDateMillis = s.dueDateMillis, title = s.title,
     shortDescription = s.shortDescription, fullDescription = s.fullDescription,
     category = com.vjuhbee.beecalc.model.TaskCategory.valueOf(s.category),
     importance = com.vjuhbee.beecalc.model.Importance.valueOf(s.importance),

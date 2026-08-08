@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Hive
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -29,6 +30,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.size
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -44,6 +47,8 @@ import com.vjuhbee.beecalc.ui.hives.HivesScreen
 import com.vjuhbee.beecalc.ui.hives.QrScannerScreen
 import com.vjuhbee.beecalc.ui.sync.SyncScreen
 import com.vjuhbee.beecalc.ui.tools.ToolsScreen
+import com.vjuhbee.beecalc.ui.home.HomeScreen
+import com.vjuhbee.beecalc.data.DemoApiaryData
 import com.vjuhbee.beecalc.ui.reports.ReportsScreen
 import com.vjuhbee.beecalc.model.Hive
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -51,7 +56,7 @@ import com.vjuhbee.beecalc.utils.parseHiveQr
 import com.vjuhbee.beecalc.utils.QrHiveData
 import kotlinx.coroutines.launch
 
-/** Три вкладки нижней навигации (SPEC.md §5). */
+/** Основные вкладки нижней навигации (SPEC.md §5). */
 private data class BottomTab(
     val route: String,
     val labelRes: Int,
@@ -59,6 +64,7 @@ private data class BottomTab(
 )
 
 private val tabs = listOf(
+    BottomTab("home", R.string.tab_home, Icons.Filled.Home),
     BottomTab("calculator", R.string.tab_calculator, Icons.Filled.Calculate),
     BottomTab("calendar", R.string.tab_calendar, Icons.Filled.CalendarMonth),
     BottomTab("hives", R.string.tab_hives, Icons.Filled.Hive),
@@ -75,6 +81,7 @@ fun BeeCalcNavHost() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     var pendingImport by remember { mutableStateOf<QrHiveData?>(null) }
+    var startupChoiceVisible by remember { mutableStateOf(!context.getSharedPreferences("beecalc", 0).getBoolean("startup_choice_done", false)) }
     val showBottomBar = currentRoute != "about" && currentRoute != "qr-scan" && currentRoute != "sync" && currentRoute != "reports"
     val showTopBar = currentRoute != "about" &&
         currentRoute?.startsWith("hive/") != true &&
@@ -112,7 +119,7 @@ fun BeeCalcNavHost() {
         },
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                NavigationBar(modifier = Modifier.padding(horizontal = 0.dp)) {
                     tabs.forEach { tab ->
                         // Экран улья (hive/{id}) относится к вкладке «Ульи».
                         // Маршрут calendar/{year}/{month} (переход из улья) — к «Календарю».
@@ -120,6 +127,7 @@ fun BeeCalcNavHost() {
                             (tab.route == "hives" && currentRoute?.startsWith("hive/") == true) ||
                             (tab.route == "calendar" && currentRoute?.startsWith("calendar/") == true)
                         NavigationBarItem(
+                            modifier = Modifier.weight(if (tab.route == "tools") 1.2f else 0.95f),
                             selected = selected,
                             onClick = {
                                 navController.navigate(tab.route) {
@@ -128,12 +136,13 @@ fun BeeCalcNavHost() {
                                     restoreState = true
                                 }
                             },
-                            icon = { Icon(tab.icon, contentDescription = null) },
+                            icon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(21.dp)) },
                             label = {
                                 Text(
                                     text = stringResource(tab.labelRes),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    maxLines = 1
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, letterSpacing = (-0.6).sp),
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         )
@@ -144,9 +153,10 @@ fun BeeCalcNavHost() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = "calculator",
+            startDestination = "home",
             modifier = Modifier.padding(innerPadding)
         ) {
+            composable("home") { HomeScreen(onCalendarClick = { navController.navigate("calendar") }, onHivesClick = { navController.navigate("hives") }, onQrClick = { navController.navigate("qr-scan") }, onReportsClick = { navController.navigate("reports") }) }
             composable("calculator") { CalculatorScreen() }
             composable("calendar") { CalendarScreen() }
             composable("hives") {
@@ -215,6 +225,28 @@ fun BeeCalcNavHost() {
         }
     }
 
+    if (startupChoiceVisible) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text(stringResource(R.string.startup_choice_title)) },
+            text = { Text(stringResource(R.string.startup_choice_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    context.getSharedPreferences("beecalc", 0).edit().putBoolean("startup_choice_done", true).apply()
+                    startupChoiceVisible = false
+                }) { Text(stringResource(R.string.startup_empty)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    scope.launch {
+                        DemoApiaryData.seed(hiveRepository, (context.applicationContext as BeeCalcApp).calendarRepository)
+                        context.getSharedPreferences("beecalc", 0).edit().putBoolean("startup_choice_done", true).apply()
+                        startupChoiceVisible = false
+                    }
+                }) { Text(stringResource(R.string.startup_demo)) }
+            }
+        )
+    }
     pendingImport?.let { data ->
         AlertDialog(
             onDismissRequest = { pendingImport = null },
