@@ -56,6 +56,9 @@ fun ToolsScreen(
         ToolCard(stringResource(R.string.tools_sync_title), stringResource(R.string.tools_sync_desc), onSyncClick) {
             Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
         }
+        ToolCard(stringResource(R.string.diagnostics_title), stringResource(R.string.diagnostics_privacy), onDiagnosticsClick) {
+            Icon(Icons.Filled.Assessment, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
+        }
     }
 }
 
