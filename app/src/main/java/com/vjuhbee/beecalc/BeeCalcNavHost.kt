@@ -53,6 +53,7 @@ import com.vjuhbee.beecalc.ui.hives.HivesScreen
 import com.vjuhbee.beecalc.ui.hives.QrScannerScreen
 import com.vjuhbee.beecalc.ui.sync.SyncScreen
 import com.vjuhbee.beecalc.ui.tools.ToolsScreen
+import com.vjuhbee.beecalc.ui.tools.DiagnosticsScreen
 import com.vjuhbee.beecalc.ui.home.HomeScreen
 import com.vjuhbee.beecalc.data.DemoApiaryData
 import com.vjuhbee.beecalc.ui.reports.ReportsScreen
@@ -190,9 +191,10 @@ fun BeeCalcNavHost() {
                 ToolsScreen(
                     onScanClick = { navController.navigate("qr-scan") },
                     onSyncClick = { navController.navigate("sync") },
-                    onReportsClick = { navController.navigate("reports") }, onReportScanClick = { navController.navigate("report-qr-scan") }
+                    onReportsClick = { navController.navigate("reports") }, onReportScanClick = { navController.navigate("report-qr-scan") }, onDiagnosticsClick = { navController.navigate("diagnostics") }
                 )
             }
+            composable("diagnostics") { DiagnosticsScreen(onBack = { navController.popBackStack() }) }
             composable("reports") { ReportsScreen(onBack = { navController.popBackStack() }) }
             composable("report-qr-scan") { ReportQrScannerScreen(onBack = { navController.popBackStack() }) }
             composable(

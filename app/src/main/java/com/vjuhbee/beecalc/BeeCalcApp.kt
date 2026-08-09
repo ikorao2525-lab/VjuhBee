@@ -7,24 +7,29 @@ import com.vjuhbee.beecalc.data.RoomCalendarRepository
 import com.vjuhbee.beecalc.data.RoomHiveRepository
 import com.vjuhbee.beecalc.data.db.BeeCalcDatabase
 import com.vjuhbee.beecalc.data.sync.SyncRepository
+import com.vjuhbee.beecalc.diagnostics.DiagnosticLogger
 
-/**
- * Application-класс: держит единственные экземпляры базы и репозиториев.
- * Простая замена DI-фреймворку — без магии (SPEC.md §11).
- */
+/** Application-класс: держит единственные экземпляры базы и репозиториев. */
 class BeeCalcApp : Application() {
+    val diagnosticLogger: DiagnosticLogger by lazy { DiagnosticLogger(this) }
+
+    override fun onCreate() {
+        super.onCreate()
+        diagnosticLogger.markStartupStarted()
+        if (diagnosticLogger.consumeInterruptedStartup()) {
+            diagnosticLogger.warning("Previous startup did not complete")
+        }
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            diagnosticLogger.error("Uncaught exception on ${thread.name}", throwable)
+            diagnosticLogger.markStartupStarted()
+        }
+        diagnosticLogger.info("Application started")
+    }
 
     val database: BeeCalcDatabase by lazy { BeeCalcDatabase.build(this) }
-
     val calendarRepository: CalendarRepository by lazy {
         RoomCalendarRepository(database.calendarTaskDao(), database.harvestItemDao())
     }
-
-    val hiveRepository: HiveRepository by lazy {
-        RoomHiveRepository(database.hiveDao())
-    }
-
-    val syncRepository: SyncRepository by lazy {
-        SyncRepository(hiveRepository, calendarRepository)
-    }
+    val hiveRepository: HiveRepository by lazy { RoomHiveRepository(database.hiveDao()) }
+    val syncRepository: SyncRepository by lazy { SyncRepository(hiveRepository, calendarRepository) }
 }

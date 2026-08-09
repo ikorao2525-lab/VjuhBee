@@ -1,4 +1,4 @@
-﻿package com.vjuhbee.beecalc.ui.tools
+package com.vjuhbee.beecalc.ui.tools
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,7 +30,8 @@ fun ToolsScreen(
     onScanClick: () -> Unit,
     onSyncClick: () -> Unit,
     onReportsClick: () -> Unit,
-    onReportScanClick: () -> Unit
+    onReportScanClick: () -> Unit,
+    onDiagnosticsClick: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
