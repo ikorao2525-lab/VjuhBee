@@ -43,7 +43,9 @@ $env:ANDROID_HOME = "C:\Users\jukle\AppData\Local\Android\Sdk"
 
 APK:
 
-`dist/BeeCalc_v0.8.0-alpha-test.apk`
+`app/build/outputs/apk/beta/debug/app-beta-debug.apk`
+
+Для личной рассылки тестерам APK можно переименовать в `BeeCalc_v0.8.2-alpha-test.apk`.
 
 Исходный файл Gradle: `app/build/outputs/apk/beta/debug/app-beta-debug.apk`
 
