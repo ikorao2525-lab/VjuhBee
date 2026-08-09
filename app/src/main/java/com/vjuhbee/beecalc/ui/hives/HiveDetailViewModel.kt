@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Какой диалог открыт на экране улья. */
@@ -26,13 +27,20 @@ sealed interface HiveDialog {
     data object ShowQr : HiveDialog
 }
 
+enum class HistoryTypeFilter { ALL, INSPECTIONS, TREATMENTS }
+
+private data class HistoryFilterState(val query: String = "", val type: HistoryTypeFilter = HistoryTypeFilter.ALL, val year: Int? = null)
+
 data class HiveDetailUiState(
     val hive: Hive? = null,
     val inspections: List<Inspection> = emptyList(),
     val treatments: List<Treatment> = emptyList(),
     val linkedTasks: List<CalendarTask> = emptyList(),
     val dialog: HiveDialog? = null,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val historyQuery: String = "",
+    val historyTypeFilter: HistoryTypeFilter = HistoryTypeFilter.ALL,
+    val historyYear: Int? = null
 )
 
 class HiveDetailViewModel(
@@ -48,6 +56,7 @@ class HiveDetailViewModel(
 
     private val dialog = MutableStateFlow<HiveDialog?>(null)
     private val deleted = MutableStateFlow(false)
+    private val historyFilters = MutableStateFlow(HistoryFilterState())
 
     /**
      * Работы календаря, привязанные к этому улью (SPEC.md §5.2, v0.5):
@@ -62,25 +71,44 @@ class HiveDetailViewModel(
 
     val uiState: StateFlow<HiveDetailUiState> =
         combine(
-            repository.observeHive(hiveId),
-            repository.observeInspections(hiveId),
-            repository.observeTreatments(hiveId),
-            linkedTasks,
-            combine(dialog, deleted) { d, del -> d to del }
-        ) { hive, inspections, treatments, linked, dd ->
+            listOf(
+                repository.observeHive(hiveId),
+                repository.observeInspections(hiveId),
+                repository.observeTreatments(hiveId),
+                linkedTasks,
+                combine(dialog, deleted) { d, del -> d to del },
+                historyFilters
+            )
+        ) { values ->
+            val hive = values[0] as Hive?
+            val inspections = values[1] as List<Inspection>
+            val treatments = values[2] as List<Treatment>
+            val linked = values[3] as List<CalendarTask>
+            val dialogState = values[4] as Pair< HiveDialog?, Boolean>
+            val filter = values[5] as HistoryFilterState
+            fun yearOf(date: Long): Int = java.util.Calendar.getInstance().apply { timeInMillis = date }.get(java.util.Calendar.YEAR)
+            val filteredInspections = inspections.filter { filter.type != HistoryTypeFilter.TREATMENTS && (filter.query.isBlank() || it.note.contains(filter.query, true)) && (filter.year == null || yearOf(it.date) == filter.year) }
+            val filteredTreatments = treatments.filter { filter.type != HistoryTypeFilter.INSPECTIONS && (filter.query.isBlank() || it.medicine.contains(filter.query, true) || it.note.contains(filter.query, true)) && (filter.year == null || yearOf(it.date) == filter.year) }
             HiveDetailUiState(
                 hive = hive,
-                inspections = inspections,
-                treatments = treatments,
+                inspections = filteredInspections,
+                treatments = filteredTreatments,
                 linkedTasks = linked,
-                dialog = dd.first,
-                isDeleted = dd.second
+                dialog = dialogState.first,
+                isDeleted = dialogState.second,
+                historyQuery = filter.query,
+                historyTypeFilter = filter.type,
+                historyYear = filter.year
             )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = HiveDetailUiState()
         )
+    fun setHistoryQuery(value: String) { historyFilters.update { it.copy(query = value) } }
+    fun setHistoryTypeFilter(value: HistoryTypeFilter) { historyFilters.update { it.copy(type = value) } }
+    fun setHistoryYear(value: Int?) { historyFilters.update { it.copy(year = value) } }
+    fun clearHistoryFilters() { historyFilters.value = HistoryFilterState() }
 
     fun openDialog(newDialog: HiveDialog) {
         dialog.value = newDialog

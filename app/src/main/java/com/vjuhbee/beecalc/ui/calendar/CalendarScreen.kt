@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -23,7 +24,11 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -81,6 +86,8 @@ fun CalendarScreen(
     var trashExpanded by remember { mutableStateOf(false) }
     // uuid улья -> имя: для показа привязанных ульев в карточке работы.
     val nameByUuid = state.hives.associate { it.uuid to it.name }
+    var filtersExpanded by remember { mutableStateOf(false) }
+    val filtersActive = state.searchQuery.isNotBlank() || state.statusFilter != TaskStatusFilter.ALL || state.categoryFilter != null || state.importantOnly
 
     // Переход из экрана улья (маршрут calendar/{year}/{month}): раскрыть
     // нужный год+месяц, где работа видна (SPEC.md §5.2, v0.5).
@@ -104,6 +111,41 @@ fun CalendarScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
+        }
+
+        item(key = "calendar_filters_button") {
+            val activeCount = listOf(
+                state.searchQuery.isNotBlank(),
+                state.statusFilter != TaskStatusFilter.ALL,
+                state.categoryFilter != null,
+                state.importantOnly
+            ).count { it }
+            Surface(
+                color = if (filtersActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(modifier = Modifier.padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.calendar_filters),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (filtersActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (filtersActive) {
+                        Text(
+                            text = stringResource(R.string.calendar_filter_active_count, activeCount),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    IconButton(onClick = { filtersExpanded = true }) {
+                        Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.calendar_filters), tint = if (filtersActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
         }
 
         state.years.forEach { year ->
@@ -204,6 +246,50 @@ fun CalendarScreen(
         }
     }
 
+    if (filtersExpanded) {
+        AlertDialog(
+            onDismissRequest = { filtersExpanded = false },
+            title = { Text(stringResource(R.string.calendar_filters)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = state.searchQuery,
+                        onValueChange = viewModel::setSearchQuery,
+                        label = { Text(stringResource(R.string.calendar_search)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Text(stringResource(R.string.calendar_filter_status), style = MaterialTheme.typography.labelLarge)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = state.statusFilter == TaskStatusFilter.ALL, onClick = { viewModel.setStatusFilter(TaskStatusFilter.ALL) }, label = { Text(stringResource(R.string.calendar_filter_all)) })
+                        FilterChip(selected = state.statusFilter == TaskStatusFilter.ACTIVE, onClick = { viewModel.setStatusFilter(TaskStatusFilter.ACTIVE) }, label = { Text(stringResource(R.string.calendar_filter_active)) })
+                        FilterChip(selected = state.statusFilter == TaskStatusFilter.DONE, onClick = { viewModel.setStatusFilter(TaskStatusFilter.DONE) }, label = { Text(stringResource(R.string.calendar_filter_done)) })
+                    }
+                    Text(stringResource(R.string.calendar_filter_category), style = MaterialTheme.typography.labelLarge)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = state.categoryFilter == null, onClick = { viewModel.setCategoryFilter(null) }, label = { Text(stringResource(R.string.calendar_filter_category_all)) })
+                        TaskCategory.entries.forEach { category ->
+                            FilterChip(selected = state.categoryFilter == category, onClick = { viewModel.setCategoryFilter(category) }, label = { Text(stringResource(categoryNameRes(category))) })
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.calendar_filter_important), modifier = Modifier.weight(1f))
+                        Switch(checked = state.importantOnly, onCheckedChange = viewModel::setImportantOnly)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { filtersExpanded = false }) {
+                    Text(stringResource(R.string.calendar_filter_apply))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::clearFilters) {
+                    Text(stringResource(R.string.calendar_filter_clear))
+                }
+            }
+        )
+    }
     state.editor?.let { editor ->
         TaskEditorDialog(
             editor = editor,

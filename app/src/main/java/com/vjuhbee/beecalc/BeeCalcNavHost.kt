@@ -43,6 +43,7 @@ import com.vjuhbee.beecalc.ui.about.AboutScreen
 import com.vjuhbee.beecalc.ui.calculator.CalculatorScreen
 import com.vjuhbee.beecalc.ui.calculator.CalculatorCatalogScreen
 import com.vjuhbee.beecalc.ui.calculator.CandiScreen
+import com.vjuhbee.beecalc.ui.calculator.TreatmentScreen
 import com.vjuhbee.beecalc.ui.calendar.CalendarScreen
 import com.vjuhbee.beecalc.ui.hives.HiveDetailScreen
 import com.vjuhbee.beecalc.ui.hives.HivesScreen
@@ -134,6 +135,8 @@ fun BeeCalcNavHost() {
                             onClick = {
                                 if (tab.route == "home") {
                                     navController.popBackStack("home", inclusive = false)
+                                } else if (tab.route == "calculator" && currentRoute?.startsWith("calculator/") == true) {
+                                    navController.popBackStack("calculator", inclusive = false)
                                 } else {
                                     navController.navigate(tab.route) {
                                         popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -141,8 +144,7 @@ fun BeeCalcNavHost() {
                                         restoreState = true
                                     }
                                 }
-                            },
-                            icon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(21.dp)) },
+                            },                            icon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(21.dp)) },
                             label = {
                                 Text(
                                     text = stringResource(tab.labelRes),
@@ -163,9 +165,10 @@ fun BeeCalcNavHost() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("home") { HomeScreen(onCalendarClick = { navController.navigate("calendar") }, onHivesClick = { navController.navigate("hives") }, onQrClick = { navController.navigate("qr-scan") }, onReportsClick = { navController.navigate("reports") }) }
-            composable("calculator") { CalculatorCatalogScreen(onSyrupClick = { navController.navigate("calculator/syrup") }, onCandiClick = { navController.navigate("calculator/candi") }) }
+            composable("calculator") { CalculatorCatalogScreen(onSyrupClick = { navController.navigate("calculator/syrup") }, onCandiClick = { navController.navigate("calculator/candi") }, onTreatmentClick = { navController.navigate("calculator/treatment") }) }
             composable("calculator/syrup") { CalculatorScreen() }
             composable("calculator/candi") { CandiScreen(onBack = { navController.popBackStack() }) }
+            composable("calculator/treatment") { TreatmentScreen(onBack = { navController.popBackStack() }) }
             composable("calendar") { CalendarScreen() }
             composable("calendar/{year}/{month}/{taskUuid}", arguments = listOf(navArgument("year") { type = NavType.IntType }, navArgument("month") { type = NavType.IntType }, navArgument("taskUuid") { type = NavType.StringType })) { entry ->
                 CalendarScreen(year = entry.arguments?.getInt("year"), month = entry.arguments?.getInt("month"), taskUuid = entry.arguments?.getString("taskUuid"))
