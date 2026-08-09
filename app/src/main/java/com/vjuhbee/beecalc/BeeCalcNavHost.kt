@@ -44,6 +44,9 @@ import com.vjuhbee.beecalc.ui.calculator.CalculatorScreen
 import com.vjuhbee.beecalc.ui.calculator.CalculatorCatalogScreen
 import com.vjuhbee.beecalc.ui.calculator.CandiScreen
 import com.vjuhbee.beecalc.ui.calculator.TreatmentScreen
+import com.vjuhbee.beecalc.ui.calculator.ApiaryExpansionScreen
+import com.vjuhbee.beecalc.ui.calculator.WinterFeedScreen
+import com.vjuhbee.beecalc.ui.calculator.HoneyJarsScreen
 import com.vjuhbee.beecalc.ui.calendar.CalendarScreen
 import com.vjuhbee.beecalc.ui.hives.HiveDetailScreen
 import com.vjuhbee.beecalc.ui.hives.HivesScreen
@@ -53,6 +56,7 @@ import com.vjuhbee.beecalc.ui.tools.ToolsScreen
 import com.vjuhbee.beecalc.ui.home.HomeScreen
 import com.vjuhbee.beecalc.data.DemoApiaryData
 import com.vjuhbee.beecalc.ui.reports.ReportsScreen
+import com.vjuhbee.beecalc.ui.reports.ReportQrScannerScreen
 import com.vjuhbee.beecalc.model.Hive
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vjuhbee.beecalc.utils.parseHiveQr
@@ -165,10 +169,13 @@ fun BeeCalcNavHost() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("home") { HomeScreen(onCalendarClick = { navController.navigate("calendar") }, onHivesClick = { navController.navigate("hives") }, onQrClick = { navController.navigate("qr-scan") }, onReportsClick = { navController.navigate("reports") }) }
-            composable("calculator") { CalculatorCatalogScreen(onSyrupClick = { navController.navigate("calculator/syrup") }, onCandiClick = { navController.navigate("calculator/candi") }, onTreatmentClick = { navController.navigate("calculator/treatment") }) }
+            composable("calculator") { CalculatorCatalogScreen(onSyrupClick = { navController.navigate("calculator/syrup") }, onCandiClick = { navController.navigate("calculator/candi") }, onTreatmentClick = { navController.navigate("calculator/treatment") }, onExpansionClick = { navController.navigate("calculator/expansion") }, onWinterClick = { navController.navigate("calculator/winter") }, onHoneyJarsClick = { navController.navigate("calculator/honey-jars") }) }
             composable("calculator/syrup") { CalculatorScreen() }
             composable("calculator/candi") { CandiScreen(onBack = { navController.popBackStack() }) }
             composable("calculator/treatment") { TreatmentScreen(onBack = { navController.popBackStack() }) }
+            composable("calculator/expansion") { ApiaryExpansionScreen(onBack = { navController.popBackStack() }) }
+            composable("calculator/winter") { WinterFeedScreen(onBack = { navController.popBackStack() }) }
+            composable("calculator/honey-jars") { HoneyJarsScreen(onBack = { navController.popBackStack() }) }
             composable("calendar") { CalendarScreen() }
             composable("calendar/{year}/{month}/{taskUuid}", arguments = listOf(navArgument("year") { type = NavType.IntType }, navArgument("month") { type = NavType.IntType }, navArgument("taskUuid") { type = NavType.StringType })) { entry ->
                 CalendarScreen(year = entry.arguments?.getInt("year"), month = entry.arguments?.getInt("month"), taskUuid = entry.arguments?.getString("taskUuid"))
@@ -183,10 +190,11 @@ fun BeeCalcNavHost() {
                 ToolsScreen(
                     onScanClick = { navController.navigate("qr-scan") },
                     onSyncClick = { navController.navigate("sync") },
-                    onReportsClick = { navController.navigate("reports") }
+                    onReportsClick = { navController.navigate("reports") }, onReportScanClick = { navController.navigate("report-qr-scan") }
                 )
             }
             composable("reports") { ReportsScreen(onBack = { navController.popBackStack() }) }
+            composable("report-qr-scan") { ReportQrScannerScreen(onBack = { navController.popBackStack() }) }
             composable(
                 route = "reports/{hiveUuid}",
                 arguments = listOf(navArgument("hiveUuid") { type = NavType.StringType })
