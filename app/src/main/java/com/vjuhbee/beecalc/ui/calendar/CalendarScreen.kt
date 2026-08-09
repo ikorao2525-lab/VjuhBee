@@ -73,6 +73,7 @@ import java.util.Locale
 fun CalendarScreen(
     year: Int? = null,
     month: Int? = null,
+    taskUuid: String? = null,
     viewModel: CalendarViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -86,6 +87,9 @@ fun CalendarScreen(
     if (year != null && month != null) {
         LaunchedEffect(year, month) {
             viewModel.expandTo(year, month)
+            taskUuid?.let { uuid ->
+                state.tasksByYearMonth[year]?.get(month)?.firstOrNull { it.uuid == uuid }?.let(viewModel::startEdit)
+            }
         }
     }
 
@@ -472,7 +476,7 @@ private fun TrashCard(
 /** Диалог добавления/редактирования работы. */
 @OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun TaskEditorDialog(
+fun TaskEditorDialog(
     editor: TaskEditor,
     monthNames: Array<String>,
     hives: List<Hive>,

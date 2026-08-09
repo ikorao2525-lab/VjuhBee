@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.vjuhbee.beecalc.BeeCalcApp
 import com.vjuhbee.beecalc.model.CalendarTask
 import com.vjuhbee.beecalc.model.Hive
+import kotlinx.coroutines.launch
 import com.vjuhbee.beecalc.ui.calendar.DueStatus
 import com.vjuhbee.beecalc.ui.calendar.dueStatus
 import kotlinx.coroutines.flow.SharingStarted
@@ -32,6 +33,11 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     ) { tasks, hives -> buildState(tasks, hives) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
+    fun markDone(task: CalendarTask) {
+        viewModelScope.launch {
+            beeCalcApp.calendarRepository.updateTask(task.copy(isDone = true, updatedAt = System.currentTimeMillis()))
+        }
+    }
     private fun buildState(tasks: List<CalendarTask>, hives: List<Hive>): HomeUiState {
         val today = LocalDate.now()
         val active = tasks.filter { !it.isDeleted && !it.isDone }

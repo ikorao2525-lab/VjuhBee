@@ -23,6 +23,7 @@
     <string name="home_critical">Критично</string>
     <string name="home_empty">На ближайшее время задач со сроком нет.</string>
     <string name="home_due_date">Срок: %1$s%2$s</string>
+    <string name="home_task_open">Открыть работу</string>
     <string name="tab_calculator">Калькуляторы</string>
     <string name="tab_calendar">Календарь</string>
     <string name="tab_hives">Ульи</string>

@@ -32,12 +32,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.size
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import android.net.Uri
 import com.vjuhbee.beecalc.ui.about.AboutScreen
 import com.vjuhbee.beecalc.ui.calculator.CalculatorScreen
@@ -132,10 +132,14 @@ fun BeeCalcNavHost() {
                             modifier = Modifier.weight(if (tab.route == "tools") 1.2f else 0.95f),
                             selected = selected,
                             onClick = {
-                                navController.navigate(tab.route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+                                if (tab.route == "home") {
+                                    navController.popBackStack("home", inclusive = false)
+                                } else {
+                                    navController.navigate(tab.route) {
+                                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
                             },
                             icon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(21.dp)) },
@@ -163,6 +167,9 @@ fun BeeCalcNavHost() {
             composable("calculator/syrup") { CalculatorScreen() }
             composable("calculator/candi") { CandiScreen(onBack = { navController.popBackStack() }) }
             composable("calendar") { CalendarScreen() }
+            composable("calendar/{year}/{month}/{taskUuid}", arguments = listOf(navArgument("year") { type = NavType.IntType }, navArgument("month") { type = NavType.IntType }, navArgument("taskUuid") { type = NavType.StringType })) { entry ->
+                CalendarScreen(year = entry.arguments?.getInt("year"), month = entry.arguments?.getInt("month"), taskUuid = entry.arguments?.getString("taskUuid"))
+            }
             composable("hives") {
                 HivesScreen(
                     onHiveClick = { hiveId -> navController.navigate("hive/$hiveId") },
