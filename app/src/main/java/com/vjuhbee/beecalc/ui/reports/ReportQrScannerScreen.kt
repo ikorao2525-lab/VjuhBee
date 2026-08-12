@@ -1,4 +1,4 @@
-﻿package com.vjuhbee.beecalc.ui.reports
+package com.vjuhbee.beecalc.ui.reports
 
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement

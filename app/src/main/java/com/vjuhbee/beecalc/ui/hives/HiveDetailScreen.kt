@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -97,10 +98,19 @@ fun HiveDetailScreen(
     }
 
     val hive = state.hive ?: return
-    var confirmDeleteHive by remember { mutableStateOf(false) }
+    var showDeleteHiveDialog by remember { mutableStateOf(false) }
     // Выбранная привязанная работа — показываем её read-only поверх экрана.
     var selectedTask by remember { mutableStateOf<CalendarTask?>(null) }
 
+    if (showDeleteHiveDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteHiveDialog = false },
+            title = { Text(stringResource(R.string.confirm_delete_title)) },
+            text = { Text(stringResource(R.string.confirm_delete_hive, hive.name)) },
+            confirmButton = { TextButton(onClick = { showDeleteHiveDialog = false; viewModel.deleteHive(hive) }) { Text(stringResource(R.string.confirm_delete_action)) } },
+            dismissButton = { TextButton(onClick = { showDeleteHiveDialog = false }) { Text(stringResource(R.string.confirm_cancel)) } }
+        )
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -173,21 +183,12 @@ fun HiveDetailScreen(
                         Text(stringResource(R.string.calendar_edit_task))
                     }
                     OutlinedButton(
-                        onClick = {
-                            if (confirmDeleteHive) viewModel.deleteHive(hive)
-                            else confirmDeleteHive = true
-                        },
+                        onClick = { showDeleteHiveDialog = true },
                         modifier = Modifier
                             .weight(1f)
                             .heightIn(min = 48.dp)
                     ) {
-                        Text(
-                            text = stringResource(
-                                if (confirmDeleteHive) R.string.hive_delete_confirm
-                                else R.string.hive_delete
-                            ),
-                            color = MaterialTheme.colorScheme.error
-                        )
+                        Text(text = stringResource(R.string.hive_delete), color = MaterialTheme.colorScheme.error)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -326,19 +327,28 @@ private fun QuickHiveSummary(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Сводка улья", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text("Работ: $tasks · осмотров: $inspections · обработок: $treatments")
+            Text(stringResource(R.string.hive_summary_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.hive_summary_counts, tasks, inspections, treatments))
             if (harvestItems.isEmpty()) {
-                Text("Урожай: пока нет данных")
+                Text(stringResource(R.string.hive_summary_harvest_empty))
             } else {
                 harvestItems.groupBy { it.product to it.unit }.forEach { (key, items) ->
-                    Text("${key.first.code}: ${items.sumOf { it.amount }} ${key.second.label}")
+                    Text(stringResource(R.string.harvest_amount, harvestProductName(key.first), items.sumOf { it.amount }, harvestUnitName(key.second)))
                 }
             }
         }
     }
 }
 
+@Composable
+private fun harvestProductName(product: com.vjuhbee.beecalc.model.HarvestProduct): String = stringResource(when (product) { com.vjuhbee.beecalc.model.HarvestProduct.HONEY -> R.string.harvest_product_honey; com.vjuhbee.beecalc.model.HarvestProduct.POLLEN -> R.string.harvest_product_pollen; com.vjuhbee.beecalc.model.HarvestProduct.BEE_BREAD -> R.string.harvest_product_bee_bread; com.vjuhbee.beecalc.model.HarvestProduct.PROPOLIS -> R.string.harvest_product_propolis; com.vjuhbee.beecalc.model.HarvestProduct.WAX -> R.string.harvest_product_wax; com.vjuhbee.beecalc.model.HarvestProduct.ROYAL_JELLY -> R.string.harvest_product_royal_jelly; com.vjuhbee.beecalc.model.HarvestProduct.CAPPINGS -> R.string.harvest_product_cappings; com.vjuhbee.beecalc.model.HarvestProduct.WAX_MERVA -> R.string.harvest_product_wax_merva; com.vjuhbee.beecalc.model.HarvestProduct.BEE_VENOM -> R.string.harvest_product_bee_venom; com.vjuhbee.beecalc.model.HarvestProduct.WINTER_BEES -> R.string.harvest_product_winter_bees; com.vjuhbee.beecalc.model.HarvestProduct.QUEENS -> R.string.harvest_product_queens; com.vjuhbee.beecalc.model.HarvestProduct.NUCLEUS_COLONIES -> R.string.harvest_product_nucleus_colonies; com.vjuhbee.beecalc.model.HarvestProduct.PACKAGE_BEES -> R.string.harvest_product_package_bees })
+@Composable
+private fun harvestUnitName(unit: com.vjuhbee.beecalc.model.HarvestUnit): String = stringResource(when (unit) {
+    com.vjuhbee.beecalc.model.HarvestUnit.KG -> R.string.harvest_unit_kg
+    com.vjuhbee.beecalc.model.HarvestUnit.LITER -> R.string.harvest_unit_liter
+    com.vjuhbee.beecalc.model.HarvestUnit.GRAM -> R.string.harvest_unit_gram
+    com.vjuhbee.beecalc.model.HarvestUnit.PIECE -> R.string.harvest_unit_piece
+})
 /** История: осмотры и обработки одним списком, свежие сверху. */
 private sealed interface HistoryEntry {
     val date: Long
@@ -413,7 +423,7 @@ private fun RecordCard(
     onDelete: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    var confirmDelete by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Card {
         Column(
@@ -444,13 +454,11 @@ private fun RecordCard(
                     modifier = Modifier.weight(1f)
                 )
                 TextButton(
-                    onClick = { if (confirmDelete) onDelete() else confirmDelete = true },
+                    onClick = { showDeleteDialog = true },
                     modifier = Modifier.heightIn(min = 48.dp)
                 ) {
                     Text(
-                        text = stringResource(
-                            if (confirmDelete) R.string.editor_delete_confirm else R.string.editor_delete
-                        ),
+                        text = stringResource(R.string.editor_delete),
                         color = MaterialTheme.colorScheme.error
                     )
                 }
@@ -458,7 +466,15 @@ private fun RecordCard(
             content()
         }
     }
-}
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.confirm_delete_title)) },
+            text = { Text(stringResource(R.string.confirm_delete_record)) },
+            confirmButton = { TextButton(onClick = { showDeleteDialog = false; onDelete() }) { Text(stringResource(R.string.confirm_delete_action)) } },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.confirm_cancel)) } }
+        )
+    }}
 
 /** Диалог нового осмотра: дата, рамки, расплод, матка, заметка. */
 @Composable
@@ -868,7 +884,7 @@ private fun LinkedTaskDialog(
     onUnlink: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var confirmUnlink by remember { mutableStateOf(false) }
+    var showUnlinkDialog by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card {
@@ -935,18 +951,13 @@ private fun LinkedTaskDialog(
                 )
 
                 TextButton(
-                    onClick = {
-                        if (confirmUnlink) onUnlink() else confirmUnlink = true
-                    },
+                    onClick = { showUnlinkDialog = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 48.dp)
                 ) {
                     Text(
-                        text = stringResource(
-                            if (confirmUnlink) R.string.hive_linked_unlink_confirm
-                            else R.string.hive_linked_unlink
-                        ),
+                        text = stringResource(R.string.hive_linked_unlink),
                         color = MaterialTheme.colorScheme.error
                     )
                 }

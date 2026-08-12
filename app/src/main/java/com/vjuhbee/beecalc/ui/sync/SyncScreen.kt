@@ -54,6 +54,7 @@ fun SyncScreen(
     viewModel: SyncViewModel
 ) {
     val context = LocalContext.current
+    val shareTitle = stringResource(R.string.sync_export_share_title)
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var backupsExpanded by remember { mutableStateOf(false) }
@@ -86,7 +87,7 @@ fun SyncScreen(
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
                     context.startActivity(
-                        Intent.createChooser(intent, "Отправить пасеку")
+                        Intent.createChooser(intent, shareTitle)
                     )
                 }
                 is SyncMessage.Error -> {
@@ -184,7 +185,7 @@ Card(modifier = Modifier.fillMaxWidth()) {
                             if (state.backups.isEmpty()) Text(stringResource(R.string.sync_backups_empty))
                             else state.backups.forEach { backup ->
                                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text(formatBackup(backup), modifier = Modifier.fillMaxWidth(), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    Text(formatBackup(context, backup), modifier = Modifier.fillMaxWidth(), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                     Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                                         OutlinedButton(onClick = { viewModel.selectBackup(backup); backupSaveLauncher.launch("beecalc-backup.json") }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sync_backup_save)) }
                                         OutlinedButton(onClick = { viewModel.restoreBackup(backup) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sync_backup_restore)) }
@@ -265,10 +266,10 @@ Card(modifier = Modifier.fillMaxWidth()) {
     }
 }
 
-private fun formatBackup(backup: com.vjuhbee.beecalc.data.sync.SyncFileUtils.BackupInfo): String {
+private fun formatBackup(context: android.content.Context, backup: com.vjuhbee.beecalc.data.sync.SyncFileUtils.BackupInfo): String {
     val date = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(backup.modifiedAt))
     val size = DecimalFormat("#,##0").format(backup.sizeBytes)
-    return "$date · $size Б"
+    return context.getString(R.string.sync_backup_info, date, size)
 }
 
 @Composable

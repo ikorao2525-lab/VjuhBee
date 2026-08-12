@@ -1,5 +1,10 @@
 package com.vjuhbee.beecalc.ui.calendar
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -84,6 +89,27 @@ fun CalendarScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val monthNames = stringArrayResource(R.array.month_names)
     var trashExpanded by remember { mutableStateOf(false) }
+    var tasksMovingToTrash by remember { mutableStateOf(emptySet<String>()) }
+    var tasksDeletingForever by remember { mutableStateOf(emptySet<String>()) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    fun moveTaskToTrash(task: CalendarTask) {
+        if (task.uuid in tasksMovingToTrash) return
+        tasksMovingToTrash = tasksMovingToTrash + task.uuid
+        scope.launch {
+            delay(280)
+            viewModel.deleteTask(task)
+            tasksMovingToTrash = tasksMovingToTrash - task.uuid
+        }
+    }
+    fun deleteTaskForever(task: CalendarTask) {
+        if (task.uuid in tasksDeletingForever) return
+        tasksDeletingForever = tasksDeletingForever + task.uuid
+        scope.launch {
+            delay(280)
+            viewModel.deleteForever(task)
+            tasksDeletingForever = tasksDeletingForever - task.uuid
+        }
+    }
     // uuid улья -> имя: для показа привязанных ульев в карточке работы.
     val nameByUuid = state.hives.associate { it.uuid to it.name }
     var filtersExpanded by remember { mutableStateOf(false) }
@@ -179,13 +205,18 @@ fun CalendarScreen(
                     }
                     if (isExpanded) {
                         items(tasks, key = { "task_${it.id}" }) { task ->
-                            TaskCard(
-                                task = task,
-                                hiveNames = task.linkedHiveUuids.mapNotNull { nameByUuid[it] },
-                                onDoneChange = { done -> viewModel.setDone(task, done) },
-                                onEdit = { viewModel.startEdit(task) },
-                                onDelete = { viewModel.deleteTask(task) }
-                            )
+                            AnimatedVisibility(
+                                visible = task.uuid !in tasksMovingToTrash,
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                TaskCard(
+                                    task = task,
+                                    hiveNames = task.linkedHiveUuids.mapNotNull { nameByUuid[it] },
+                                    onDoneChange = { done -> viewModel.setDone(task, done) },
+                                    onEdit = { viewModel.startEdit(task) },
+                                    onDelete = { moveTaskToTrash(task) }
+                                )
+                            }
                         }
                         item(key = "add_${year}_$month") {
                             OutlinedButton(
@@ -235,12 +266,17 @@ fun CalendarScreen(
             }
             if (trashExpanded) {
                 items(state.deletedTasks, key = { "trash_${it.id}" }) { task ->
-                    TrashCard(
-                        task = task,
-                        monthNames = monthNames,
-                        onRestore = { viewModel.restoreTask(task) },
-                        onDeleteForever = { viewModel.deleteForever(task) }
-                    )
+                    AnimatedVisibility(
+                        visible = task.uuid !in tasksDeletingForever,
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        TrashCard(
+                            task = task,
+                            monthNames = monthNames,
+                            onRestore = { viewModel.restoreTask(task) },
+                            onDeleteForever = { deleteTaskForever(task) }
+                        )
+                    }
                 }
             }
         }
@@ -296,7 +332,7 @@ fun CalendarScreen(
             monthNames = monthNames,
             hives = state.hives,
             onSave = { task -> viewModel.saveTask(task, editor.isNew) },
-            onDelete = { viewModel.deleteTask(it) },
+            onDelete = { moveTaskToTrash(it) },
             onDismiss = { viewModel.closeEditor() }
         )
     }
@@ -444,7 +480,7 @@ private fun TaskCard(
                     }
                 )
                 task.dueDateMillis?.let { dueDate ->
-                    Text(stringResource(R.string.calendar_due_date, formatDueDate(dueDate)) + dueStatus(dueDate).label(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.calendar_due_date, formatDueDate(dueDate)) + dueStatus(dueDate).labelRes()?.let { stringResource(it) }.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
                 Text(
                     text = task.shortDescription,
@@ -511,7 +547,7 @@ private fun TrashCard(
     onRestore: () -> Unit,
     onDeleteForever: () -> Unit
 ) {
-    var confirmForever by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Card {
         Column(
@@ -539,25 +575,27 @@ private fun TrashCard(
                     Text(stringResource(R.string.calendar_restore))
                 }
                 OutlinedButton(
-                    onClick = {
-                        if (confirmForever) onDeleteForever() else confirmForever = true
-                    },
+                    onClick = { showDeleteDialog = true },
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(min = 48.dp)
                 ) {
                     Text(
-                        text = stringResource(
-                            if (confirmForever) R.string.calendar_delete_forever_confirm
-                            else R.string.calendar_delete_forever
-                        ),
+                        text = stringResource(R.string.calendar_delete_forever),
                         color = MaterialTheme.colorScheme.error
                     )
-                }
-            }
+                }            }
         }
     }
-}
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.confirm_delete_title)) },
+            text = { Text(stringResource(R.string.confirm_delete_task_forever, task.title)) },
+            confirmButton = { TextButton(onClick = { showDeleteDialog = false; onDeleteForever() }) { Text(stringResource(R.string.confirm_delete_action)) } },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.confirm_cancel)) } }
+        )
+    }}
 
 /** Диалог добавления/редактирования работы. */
 @OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -838,12 +876,12 @@ private fun HarvestDraftRow(
                         FilterChip(
                             selected = draft.unit == unit,
                             onClick = { onUnitChange(unit) },
-                            label = { Text(stringResource(R.string.editor_harvest_unit_choice, unit.label)) }
+                            label = { Text(stringResource(R.string.editor_harvest_unit_choice, harvestUnitName(unit))) }
                         )
                     }
                 }
             } else {
-                Text(stringResource(R.string.editor_harvest_unit, draft.unit.label))
+                Text(stringResource(R.string.editor_harvest_unit, harvestUnitName(draft.unit)))
             }
             OutlinedButton(
                 onClick = onRemove,
@@ -857,21 +895,30 @@ private fun HarvestDraftRow(
     }
 }
 
-private fun harvestProductName(product: HarvestProduct): String = when (product) {
-    HarvestProduct.HONEY -> "Мёд"
-    HarvestProduct.POLLEN -> "Пыльца"
-    HarvestProduct.BEE_BREAD -> "Перга"
-    HarvestProduct.PROPOLIS -> "Прополис"
-    HarvestProduct.WAX -> "Воск"
-    HarvestProduct.ROYAL_JELLY -> "Маточное молочко"
-    HarvestProduct.CAPPINGS -> "Забрус"
-    HarvestProduct.WAX_MERVA -> "Мерва"
-    HarvestProduct.BEE_VENOM -> "Пчелиный яд"
-    HarvestProduct.WINTER_BEES -> "Подмор"
-    HarvestProduct.QUEENS -> "Матки"
-    HarvestProduct.NUCLEUS_COLONIES -> "Отводки"
-    HarvestProduct.PACKAGE_BEES -> "Пчелопакеты"
-}
+@Composable
+private fun harvestProductName(product: HarvestProduct): String = stringResource(when (product) {
+    HarvestProduct.HONEY -> R.string.harvest_product_honey
+    HarvestProduct.POLLEN -> R.string.harvest_product_pollen
+    HarvestProduct.BEE_BREAD -> R.string.harvest_product_bee_bread
+    HarvestProduct.PROPOLIS -> R.string.harvest_product_propolis
+    HarvestProduct.WAX -> R.string.harvest_product_wax
+    HarvestProduct.ROYAL_JELLY -> R.string.harvest_product_royal_jelly
+    HarvestProduct.CAPPINGS -> R.string.harvest_product_cappings
+    HarvestProduct.WAX_MERVA -> R.string.harvest_product_wax_merva
+    HarvestProduct.BEE_VENOM -> R.string.harvest_product_bee_venom
+    HarvestProduct.WINTER_BEES -> R.string.harvest_product_winter_bees
+    HarvestProduct.QUEENS -> R.string.harvest_product_queens
+    HarvestProduct.NUCLEUS_COLONIES -> R.string.harvest_product_nucleus_colonies
+    HarvestProduct.PACKAGE_BEES -> R.string.harvest_product_package_bees
+})
+
+@Composable
+private fun harvestUnitName(unit: HarvestUnit): String = stringResource(when (unit) {
+    HarvestUnit.KG -> R.string.harvest_unit_kg
+    HarvestUnit.LITER -> R.string.harvest_unit_liter
+    HarvestUnit.GRAM -> R.string.harvest_unit_gram
+    HarvestUnit.PIECE -> R.string.harvest_unit_piece
+})
 /** Категория показывается текстом, не только цветом (SPEC.md §8). */
 @Composable
 private fun CategoryLabel(category: TaskCategory) {

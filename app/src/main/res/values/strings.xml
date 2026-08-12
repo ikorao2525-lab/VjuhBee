@@ -155,6 +155,14 @@
     <string name="calendar_restore">Вернуть</string>
     <string name="calendar_delete_forever">Насовсем</string>
     <string name="calendar_delete_forever_confirm">Точно насовсем?</string>
+    <string name="confirm_delete_title">Подтвердите удаление</string>
+    <string name="confirm_delete_task_forever">Работа «%1$s» будет удалена навсегда. Восстановить её будет нельзя.</string>
+    <string name="confirm_delete_hive">Улей «%1$s» будет удалён вместе со всеми осмотрами и обработками. Восстановить эти данные будет нельзя.</string>
+    <string name="confirm_delete_record">Запись будет удалена без возможности восстановления.</string>
+    <string name="confirm_unlink_task">Работа «%1$s» будет отвязана от этого улья. Сама работа останется в календаре.</string>
+    <string name="confirm_cancel">Отмена</string>
+    <string name="confirm_delete_action">Удалить навсегда</string>
+    <string name="confirm_unlink_action">Отвязать</string>
     <!-- Редактор работы -->
     <string name="editor_title_new">Новая работа</string>
     <string name="editor_title_edit">Изменить работу</string>
@@ -318,6 +326,10 @@
     <string name="report_qr_match">Данные отчёта совпадают с импортированной базой данных. PDF не имеет цифровой подписи.</string>
     <string name="report_qr_different">QR распознан, но текущая база данных отличается от отчёта.</string>
     <string name="report_qr_not_found">Исходные данные отчёта не найдены. Импортируйте ту же базу пасеки.</string>
+    <string name="report_qr_kind_hive">По улью</string>
+    <string name="report_qr_kind_apiary">Вся пасека</string>
+    <string name="report_qr_kind_value">Тип отчёта: %1$s</string>
+    <string name="report_qr_checksum_value">Контрольная сумма: %1$s</string>
     <string name="reports_title">Отчёты</string>
     <string name="reports_back">← Назад</string>
     <string name="reports_back_to_selection">← К выбору отчёта</string>
@@ -367,4 +379,30 @@
     <string name="about_tips_button">Оставить чаевые</string>
     <string name="about_tips_pending">Ссылка на чаевые появится после подключения CloudTips.</string>
     <string name="about_play_support_note">Приложение бесплатное. Поддержать разработчика чаевыми можно в версии BeeCalc из RuStore — без влияния на функции этой сборки.</string>
-</resources>
+    <string name="due_status_upcoming"> · скоро</string>
+    <string name="due_status_overdue"> · просрочено</string>
+    <string name="due_status_critical"> · критично</string>
+    <string name="harvest_product_honey">Мёд</string>
+    <string name="harvest_product_pollen">Пыльца</string>
+    <string name="harvest_product_bee_bread">Перга</string>
+    <string name="harvest_product_propolis">Прополис</string>
+    <string name="harvest_product_wax">Воск</string>
+    <string name="harvest_product_royal_jelly">Маточное молочко</string>
+    <string name="harvest_product_cappings">Забрус</string>
+    <string name="harvest_product_wax_merva">Мерва</string>
+    <string name="harvest_product_bee_venom">Пчелиный яд</string>
+    <string name="harvest_product_winter_bees">Подмор</string>
+    <string name="harvest_product_queens">Матки</string>
+    <string name="harvest_product_nucleus_colonies">Отводки</string>
+    <string name="harvest_product_package_bees">Пчелопакеты</string>
+    <string name="harvest_unit_kg">кг</string>
+    <string name="harvest_unit_liter">л</string>
+    <string name="harvest_unit_gram">г</string>
+    <string name="harvest_unit_piece">шт</string>
+    <string name="harvest_amount">%1$s: %2$s %3$s</string>
+    <string name="hive_summary_title">Сводка улья</string>
+    <string name="hive_summary_counts">Работ: %1$d · осмотров: %2$d · обработок: %3$d</string>
+    <string name="hive_summary_harvest_empty">Урожай: пока нет данных</string>
+    <string name="sync_export_share_title">Отправить пасеку</string>
+    <string name="sync_backup_info">%1$s · %2$s Б</string>
+    <string name="sync_file_metadata_value">%1$s, версия %2$s, %3$d ульев, %4$d работ</string></resources>
