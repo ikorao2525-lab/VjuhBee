@@ -180,6 +180,24 @@ private fun validateRoot(root: JSONObject) {
             }
         }
     }
+    private fun validateTaskEnums(root: JSONObject) {
+        val categories = com.vjuhbee.beecalc.model.TaskCategory.entries.map { it.name }.toSet()
+        val importance = com.vjuhbee.beecalc.model.Importance.entries.map { it.name }.toSet()
+        val products = com.vjuhbee.beecalc.model.HarvestProduct.entries.map { it.code }.toSet()
+        val units = com.vjuhbee.beecalc.model.HarvestUnit.entries.map { it.code }.toSet()
+        val tasks = root.getJSONArray("tasks")
+        for (index in 0 until tasks.length()) {
+            val item = tasks.getJSONObject(index)
+            require(item.optString("category") in categories) { "Неизвестная категория работы #$index" }
+            require(item.optString("importance") in importance) { "Неизвестная важность работы #$index" }
+            item.optString("harvestItems", "").takeIf { it.isNotBlank() }?.split(';')?.forEach { row ->
+                val parts = row.split(',')
+                require(parts.size == 3 && parts[0] in products && parts[2] in units && parts[1].toDoubleOrNull()?.let { it > 0 } == true) {
+                    "Некорректный урожай в работе #$index"
+                }
+            }
+        }
+    }
     private fun optNullableString(o: JSONObject, key: String): String? =
         if (o.isNull(key)) null else o.optString(key, "")
 

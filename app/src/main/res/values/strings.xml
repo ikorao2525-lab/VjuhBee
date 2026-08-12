@@ -313,9 +313,9 @@
     <string name="tools_reports_desc">История работ, осмотров и продукции</string>
     <string name="report_qr_scan">Сканировать QR отчёта</string>
     <string name="report_qr_title">Проверка QR отчёта</string>
-    <string name="report_qr_valid_payload">QR отчёта распознан. Для проверки содержимого нужна та же импортированная база данных.</string>
+    <string name="report_qr_valid_payload">QR отчёта распознан. Сверка выполняется с локально импортированной базой данных, а не с байтами PDF.</string>
     <string name="report_qr_invalid">Это не QR-код отчёта BeeCalc.</string>
-    <string name="report_qr_match">Отчёт соответствует импортированной базе данных.</string>
+    <string name="report_qr_match">Данные отчёта совпадают с импортированной базой данных. PDF не имеет цифровой подписи.</string>
     <string name="report_qr_different">QR распознан, но текущая база данных отличается от отчёта.</string>
     <string name="report_qr_not_found">Исходные данные отчёта не найдены. Импортируйте ту же базу пасеки.</string>
     <string name="reports_title">Отчёты</string>

@@ -2,8 +2,10 @@ package com.vjuhbee.beecalc.data.sync
 
 import com.vjuhbee.beecalc.BuildConfig
 
+import androidx.room.withTransaction
 import com.vjuhbee.beecalc.data.CalendarRepository
 import com.vjuhbee.beecalc.data.HiveRepository
+import com.vjuhbee.beecalc.data.db.BeeCalcDatabase
 import com.vjuhbee.beecalc.model.CalendarTask
 import com.vjuhbee.beecalc.model.Hive
 import com.vjuhbee.beecalc.model.Inspection
@@ -23,7 +25,8 @@ import org.json.JSONObject
  */
 class SyncRepository(
     private val hiveRepository: HiveRepository,
-    private val calendarRepository: CalendarRepository
+    private val calendarRepository: CalendarRepository,
+    private val database: BeeCalcDatabase? = null
 ) {
 
     // ---------- Экспорт ----------
@@ -108,7 +111,10 @@ class SyncRepository(
      * false = локальную (текущую), true = удалённую (из файла).
      */
     suspend fun apply(file: SyncFile, plan: ImportPlan, resolveConflict: (HiveConflict) -> Boolean?) {
-        // Новые ульи.
+        val execute: suspend () -> Unit = { applyUnsafe(file, plan, resolveConflict) }
+        database?.withTransaction { execute() } ?: execute()
+    }
+    private suspend fun applyUnsafe(file: SyncFile, plan: ImportPlan, resolveConflict: (HiveConflict) -> Boolean?) {
         for (remote in plan.newHives) {
             hiveRepository.addHive(
                 Hive(id = 0, name = remote.name, note = remote.note, uuid = remote.uuid, updatedAt = remote.updatedAt)
@@ -181,6 +187,18 @@ class SyncRepository(
             val local = localTasks[remote.uuid] ?: continue
             calendarRepository.updateTask(local.copyFromSync(remote))
         }
+    }
+
+    /** Replaces all data from a verified backup in one transaction. */
+    suspend fun restoreExactly(file: SyncFile) = requireNotNull(database) { "Восстановление требует Room базы" }.withTransaction {
+        requireNotNull(database).clearAllTables()
+        val plan = ImportPlan(
+            newHives = file.hives, hiveConflicts = emptyList(),
+            newInspections = file.inspections, updatedInspections = emptyList(),
+            newTreatments = file.treatments, updatedTreatments = emptyList(),
+            newTasks = file.tasks, updatedTasks = emptyList()
+        )
+        applyUnsafe(file, plan) { false }
     }
 
     // ---------- helpers ----------

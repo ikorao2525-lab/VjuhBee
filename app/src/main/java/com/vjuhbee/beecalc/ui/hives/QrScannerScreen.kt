@@ -2,10 +2,6 @@ package com.vjuhbee.beecalc.ui.hives
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.ImageFormat
-import android.graphics.Rect
-import android.graphics.YuvImage
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -48,7 +44,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.DecodeHintType
 import com.google.zxing.MultiFormatReader
-import com.google.zxing.RGBLuminanceSource
+import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 import com.vjuhbee.beecalc.R
 import java.io.ByteArrayOutputStream
@@ -210,82 +206,36 @@ private fun PermissionPrompt(
 class QrAnalyzer(
     private val onQrDetected: (String) -> Unit
 ) : ImageAnalysis.Analyzer {
-
     private val hints: Map<DecodeHintType, Any> =
         mapOf(DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE))
 
     override fun analyze(imageProxy: ImageProxy) {
-        val bitmap = proxyToBitmap(imageProxy)
-        val text = bitmap?.let { decode(it) }
-        if (text != null) {
-            onQrDetected(text)
+        try {
+            decode(imageProxy)?.let(onQrDetected)
+        } finally {
+            imageProxy.close()
         }
-        imageProxy.close()
     }
 
-    private fun decode(bitmap: Bitmap): String? {
-        val width = bitmap.width
-        val height = bitmap.height
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-        return try {
-            MultiFormatReader()
-                .apply { setHints(hints) }
-                .decode(BinaryBitmap(HybridBinarizer(RGBLuminanceSource(width, height, pixels))))
-                .text
-        } catch (_: Exception) {
-            null
-        }
+    private fun decode(proxy: ImageProxy): String? {
+        val width = proxy.width
+        val height = proxy.height
+        if (width <= 0 || height <= 0) return null
+        val luminance = copyLuminancePlane(proxy.planes.firstOrNull() ?: return null, width, height)
+        return runCatching {
+            val source = PlanarYUVLuminanceSource(luminance, width, height, 0, 0, width, height, false)
+            MultiFormatReader().apply { setHints(hints) }.decode(BinaryBitmap(HybridBinarizer(source))).text
+        }.getOrNull()
     }
 }
 
-/** Конвертирует кадр камеры (YUV_420_888) в ARGB [Bitmap], учитывая rotation. */
-private fun proxyToBitmap(proxy: ImageProxy): Bitmap? {
-    val yPlane = proxy.planes.getOrNull(0) ?: return null
-    val uPlane = proxy.planes.getOrNull(1) ?: return null
-    val vPlane = proxy.planes.getOrNull(2) ?: return null
-
-    val width = proxy.width
-    val height = proxy.height
-    if (width <= 0 || height <= 0) return null
-
-    val ySize = yPlane.buffer.remaining()
-    val uvSize = (width * height) / 4
-    val nv21 = ByteArray(ySize + uvSize * 2)
-
-    // Y plane.
-    val yBytes = ByteArray(ySize)
-    yPlane.buffer.get(yBytes)
-    System.arraycopy(yBytes, 0, nv21, 0, ySize)
-
-    // UV interleaved as NV21 (VU).
-    val uvBytes = ByteArray(uPlane.buffer.remaining() + vPlane.buffer.remaining())
-    uPlane.buffer.get(uvBytes, 0, uPlane.buffer.remaining())
-    vPlane.buffer.get(uvBytes, uPlane.buffer.remaining(), vPlane.buffer.remaining())
-    val uvOut = ByteArray(uvSize * 2)
-    val uRemaining = uPlane.buffer.remaining()
-    for (i in 0 until uvSize) {
-        uvOut[i * 2] = uvBytes[uRemaining + i] // V
-        uvOut[i * 2 + 1] = uvBytes[i]          // U
-    }
-    System.arraycopy(uvOut, 0, nv21, ySize, uvOut.size)
-
-    val yuvImage = YuvImage(nv21, ImageFormat.NV21, width, height, null)
-    val out = ByteArrayOutputStream()
-    yuvImage.compressToJpeg(Rect(0, 0, width, height), 90, out)
-    val jpeg = out.toByteArray()
-
-    val dst = android.graphics.BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size) ?: return null
-    return if (proxy.imageInfo.rotationDegrees != 0) {
-        val matrix = android.graphics.Matrix().apply {
-            postRotate(proxy.imageInfo.rotationDegrees.toFloat())
+internal fun copyLuminancePlane(plane: ImageProxy.PlaneProxy, width: Int, height: Int): ByteArray {
+    val buffer = plane.buffer.duplicate()
+    val output = ByteArray(width * height)
+    for (row in 0 until height) {
+        for (column in 0 until width) {
+            output[row * width + column] = buffer.get(row * plane.rowStride + column * plane.pixelStride)
         }
-        val rotated = Bitmap.createBitmap(
-            dst, 0, 0, dst.width, dst.height, matrix, false
-        )
-        if (rotated != dst) dst.recycle()
-        rotated
-    } else {
-        dst
     }
+    return output
 }

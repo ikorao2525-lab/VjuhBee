@@ -15,21 +15,24 @@ class BeeCalcApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        diagnosticLogger.markStartupStarted()
+        val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
         if (diagnosticLogger.consumeInterruptedStartup()) {
             diagnosticLogger.warning("Previous startup did not complete")
         }
+        diagnosticLogger.markStartupStarted()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            diagnosticLogger.error("Uncaught exception on ${thread.name}", throwable)
-            diagnosticLogger.markStartupStarted()
+            runCatching {
+                diagnosticLogger.error("Uncaught exception on ${thread.name}", throwable)
+                diagnosticLogger.markStartupStarted()
+            }
+            previousHandler?.uncaughtException(thread, throwable)
         }
         diagnosticLogger.info("Application started")
     }
-
     val database: BeeCalcDatabase by lazy { BeeCalcDatabase.build(this) }
     val calendarRepository: CalendarRepository by lazy {
         RoomCalendarRepository(database.calendarTaskDao(), database.harvestItemDao())
     }
     val hiveRepository: HiveRepository by lazy { RoomHiveRepository(database.hiveDao()) }
-    val syncRepository: SyncRepository by lazy { SyncRepository(hiveRepository, calendarRepository) }
+    val syncRepository: SyncRepository by lazy { SyncRepository(hiveRepository, calendarRepository, database) }
 }

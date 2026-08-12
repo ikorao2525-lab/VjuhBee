@@ -1,4 +1,4 @@
-﻿package com.vjuhbee.beecalc.ui.tools
+package com.vjuhbee.beecalc.ui.tools
 
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +29,8 @@ import com.vjuhbee.beecalc.R
 fun DiagnosticsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val logger = (context.applicationContext as BeeCalcApp).diagnosticLogger
+    val shareSubject = stringResource(R.string.diagnostics_share_subject)
+    val shareTitle = stringResource(R.string.diagnostics_share)
     var text by remember { mutableStateOf("") }
     LaunchedEffect(Unit) { text = logger.read() }
     Column(
@@ -41,10 +43,10 @@ fun DiagnosticsScreen(onBack: () -> Unit) {
         Button(onClick = {
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
-                putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.diagnostics_share_subject))
+                putExtra(Intent.EXTRA_SUBJECT, shareSubject)
                 putExtra(Intent.EXTRA_TEXT, text)
             }
-            context.startActivity(Intent.createChooser(intent, context.getString(R.string.diagnostics_share)))
+            context.startActivity(Intent.createChooser(intent, shareTitle))
         }, enabled = text.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.diagnostics_share)) }
         OutlinedButton(onClick = { logger.clear(); text = "" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.diagnostics_clear)) }
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.calculator_back)) }

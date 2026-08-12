@@ -693,6 +693,8 @@ private fun HiveQrDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val shareTitle = stringResource(R.string.hive_qr_share_title)
+    val printTitle = stringResource(R.string.hive_qr_title)
     val qrBitmap: Bitmap? = remember(hive.uuid, hive.name, hive.note) {
         if (hive.uuid.isBlank()) null else generateHiveQr(hive.uuid, hive.name, hive.note)
     }
@@ -707,7 +709,7 @@ private fun HiveQrDialog(
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(
-            Intent.createChooser(intent, context.getString(R.string.hive_qr_share_title))
+            Intent.createChooser(intent, shareTitle)
         )
     }
 
@@ -716,7 +718,7 @@ private fun HiveQrDialog(
         val poster = createHiveQrPoster(hive.uuid, hive.name, hive.note)
         val printHelper = androidx.print.PrintHelper(context)
         printHelper.scaleMode = androidx.print.PrintHelper.SCALE_MODE_FIT
-        printHelper.printBitmap(context.getString(R.string.hive_qr_title), poster)
+        printHelper.printBitmap(printTitle, poster)
     }
 
     Dialog(onDismissRequest = onDismiss) {

@@ -124,15 +124,29 @@ private fun drawLogo(canvas: Canvas, context: Context, x: Float, y: Float, size:
 private fun makeQr(content: String, size: Int): Bitmap { val matrix = QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, size, size, mapOf(EncodeHintType.MARGIN to 1, EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.M)); val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888); for (x in 0 until size) for (y in 0 until size) bitmap.setPixel(x, y, if (matrix[x, y]) Color.BLACK else Color.WHITE); return bitmap }
 fun calculateReportChecksum(report: ReportData, kind: ReportKind): String {
     val canonical = buildString {
-        append(kind).append('|').append(report.hive?.uuid.orEmpty()).append('|').append(report.range.startMillis ?: "").append('|').append(report.range.endMillis ?: "").append('|')
-        report.tasks.sortedBy { it.uuid }.forEach { append(it.uuid).append(':').append(it.title).append(':').append(it.isDone).append('|') }
-        report.inspections.sortedBy { it.uuid }.forEach { append(it.uuid).append(':').append(it.date).append('|') }
-        report.treatments.sortedBy { it.uuid }.forEach { append(it.uuid).append(':').append(it.date).append('|') }
-        report.harvestTotals.sortedWith(compareBy({ it.product.name }, { it.unit.code })).forEach { append(it.product).append(':').append(it.amount).append(':').append(it.unit.code).append('|') }
+        append(kind).append('|').append(report.hive?.uuid.orEmpty()).append('|')
+        append(report.range.startMillis ?: "").append('|').append(report.range.endMillis ?: "").append('|')
+        report.tasks.sortedBy { it.uuid }.forEach { task ->
+            append(task.uuid).append(':').append(task.year).append(':').append(task.month).append(':')
+            append(task.dueDateMillis).append(':').append(task.title).append(':').append(task.shortDescription).append(':')
+            append(task.fullDescription).append(':').append(task.category).append(':').append(task.importance).append(':')
+            append(task.tags.joinToString(",")).append(':').append(task.isDone).append(':').append(task.isDeleted).append(':')
+            append(task.linkedHiveUuids.sorted().joinToString(",")).append('|')
+        }
+        report.inspections.sortedBy { it.uuid }.forEach { item ->
+            append(item.uuid).append(':').append(item.date).append(':').append(item.frames).append(':')
+            append(item.brood).append(':').append(item.queenSeen).append(':').append(item.note).append('|')
+        }
+        report.treatments.sortedBy { it.uuid }.forEach { item ->
+            append(item.uuid).append(':').append(item.date).append(':').append(item.medicine).append(':')
+            append(item.dose).append(':').append(item.note).append('|')
+        }
+        report.harvestTotals.sortedWith(compareBy({ it.product.name }, { it.unit.code })).forEach { item ->
+            append(item.product).append(':').append(item.amount).append(':').append(item.unit.code).append('|')
+        }
     }
     return MessageDigest.getInstance("SHA-256").digest(canonical.toByteArray()).joinToString("") { "%02x".format(it) }
-}
-private fun reportProductName(product: HarvestProduct): String = when (product) { HarvestProduct.HONEY -> "Мёд"; HarvestProduct.POLLEN -> "Пыльца"; HarvestProduct.BEE_BREAD -> "Перга"; HarvestProduct.PROPOLIS -> "Прополис"; HarvestProduct.WAX -> "Воск"; HarvestProduct.ROYAL_JELLY -> "Маточное молочко"; HarvestProduct.CAPPINGS -> "Забрус"; HarvestProduct.WAX_MERVA -> "Мерва"; HarvestProduct.BEE_VENOM -> "Пчелиный яд"; HarvestProduct.WINTER_BEES -> "Подмор"; HarvestProduct.QUEENS -> "Матки"; HarvestProduct.NUCLEUS_COLONIES -> "Отводки"; HarvestProduct.PACKAGE_BEES -> "Пчелопакеты" }
+}private fun reportProductName(product: HarvestProduct): String = when (product) { HarvestProduct.HONEY -> "Мёд"; HarvestProduct.POLLEN -> "Пыльца"; HarvestProduct.BEE_BREAD -> "Перга"; HarvestProduct.PROPOLIS -> "Прополис"; HarvestProduct.WAX -> "Воск"; HarvestProduct.ROYAL_JELLY -> "Маточное молочко"; HarvestProduct.CAPPINGS -> "Забрус"; HarvestProduct.WAX_MERVA -> "Мерва"; HarvestProduct.BEE_VENOM -> "Пчелиный яд"; HarvestProduct.WINTER_BEES -> "Подмор"; HarvestProduct.QUEENS -> "Матки"; HarvestProduct.NUCLEUS_COLONIES -> "Отводки"; HarvestProduct.PACKAGE_BEES -> "Пчелопакеты" }
 private fun reportMonths(report: ReportData): List<Pair<Int, Int>> = (report.tasks.map { it.year to it.month } + report.inspections.map { reportMonthKey(it.date) } + report.treatments.map { reportMonthKey(it.date) } + report.harvestByMonth.keys).distinct().sortedWith(compareBy({ it.first }, { it.second }))
 private fun reportMonthKey(millis: Long): Pair<Int, Int> { val c = Calendar.getInstance().apply { timeInMillis = millis }; return c.get(Calendar.YEAR) to c.get(Calendar.MONTH) + 1 }
 private fun reportMonthLabel(year: Int, month: Int): String = listOf("Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь")[month - 1] + " " + year

@@ -73,6 +73,19 @@ class ReportsViewModel(app: Application) : AndroidViewModel(app) {
     fun selectHive(uuid: String?) { selectedHiveUuid.value = uuid }
 
     fun generate(kind: ReportKind, period: ReportPeriod, customStart: Long? = null, customEnd: Long? = null) {
+        viewModelScope.launch {
+            generateFromRecords(
+                Records(
+                    hives = beeCalcApp.hiveRepository.allHives(),
+                    tasks = beeCalcApp.calendarRepository.allTasks(),
+                    inspections = beeCalcApp.hiveRepository.allInspections(),
+                    treatments = beeCalcApp.hiveRepository.allTreatments()
+                ), kind, period, customStart, customEnd
+            )
+        }
+    }
+
+    private fun generateFromRecords(records: Records, kind: ReportKind, period: ReportPeriod, customStart: Long? = null, customEnd: Long? = null) {
         val records = loadedRecords.value
         val hive = if (kind == ReportKind.HIVE) {
             records.hives.firstOrNull { it.uuid == selectedHiveUuid.value }

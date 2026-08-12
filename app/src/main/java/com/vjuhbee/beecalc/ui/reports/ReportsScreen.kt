@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import android.content.Intent
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
@@ -31,11 +32,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vjuhbee.beecalc.R
@@ -153,6 +158,9 @@ private fun ReportPage(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val shareTitle = stringResource(R.string.reports_share_title)
+    val printTitle = stringResource(R.string.reports_print_pdf)
     var pendingPdfUri by remember { mutableStateOf<android.net.Uri?>(null) }
     val savePdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { destination ->
         val source = pendingPdfUri
@@ -183,7 +191,7 @@ private fun ReportPage(
                         type = "application/pdf"
                         putExtra(Intent.EXTRA_STREAM, uri)
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }, context.getString(R.string.reports_share_title)))
+                    }, shareTitle))
                 }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
                 Text(stringResource(R.string.reports_share_pdf))
             }
@@ -200,7 +208,7 @@ Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spac
                 context.startActivity(Intent.createChooser(Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(uri, "application/pdf")
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }, context.getString(R.string.reports_print_pdf)))
+                }, printTitle))
             }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
                 Text(stringResource(R.string.reports_print_pdf))
             }

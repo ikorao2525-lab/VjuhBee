@@ -25,7 +25,7 @@ BeeCalc работает по принципу offline-first: основные �
 
 ## Текущая версия
 
-- Версия: `0.8.8-alpha`
+- Версия: `0.8.9-alpha`
 - Канал разработки: `alpha`
 - Статус сборки: тестовая версия для распространения
 - Android: минимум Android 9 (API 28)
@@ -46,7 +46,7 @@ APK:
 
 `app/build/outputs/apk/beta/debug/app-beta-debug.apk`
 
-Для личной рассылки тестерам APK можно переименовать в `BeeCalc_v0.8.8-alpha-test.apk`.
+Для личной рассылки тестерам APK можно переименовать в `BeeCalc_v0.8.9-alpha-test.apk`.
 
 Исходный файл Gradle: `app/build/outputs/apk/beta/debug/app-beta-debug.apk`
 
