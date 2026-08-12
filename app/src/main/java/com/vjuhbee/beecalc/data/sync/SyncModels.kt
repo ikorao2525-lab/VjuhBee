@@ -110,10 +110,20 @@ fun CalendarTask.toSync() = SyncTask(
 
 fun List<HarvestItem>.toSyncValue(): String = joinToString(";") { "${it.product.code},${it.amount},${it.unit.code}" }
 
-fun String.toHarvestItems(): List<HarvestItem> = split(';').mapNotNull { row ->
-    val parts = row.split(',')
-    if (parts.size != 3) return@mapNotNull null
-    val product = HarvestProduct.entries.firstOrNull { it.code == parts[0] } ?: return@mapNotNull null
-    val unit = HarvestUnit.entries.firstOrNull { it.code == parts[2] } ?: return@mapNotNull null
-    parts[1].toDoubleOrNull()?.takeIf { it > 0 }?.let { HarvestItem(product, it, unit) }
+fun String.parseHarvestItems(): List<HarvestItem> {
+    if (isBlank()) return emptyList()
+    return split(';').mapIndexed { index, row ->
+        val parts = row.split(',')
+        require(parts.size == 3) { "Некорректная запись урожая #${index + 1}" }
+        val product = requireNotNull(HarvestProduct.entries.firstOrNull { it.code == parts[0] }) {
+            "Неизвестный продукт урожая: ${parts[0]}"
+        }
+        val unit = requireNotNull(HarvestUnit.entries.firstOrNull { it.code == parts[2] }) {
+            "Неизвестная единица урожая: ${parts[2]}"
+        }
+        val amount = requireNotNull(parts[1].toDoubleOrNull()?.takeIf { it > 0 }) {
+            "Некорректное количество урожая: ${parts[1]}"
+        }
+        HarvestItem(product, amount, unit)
+    }
 }

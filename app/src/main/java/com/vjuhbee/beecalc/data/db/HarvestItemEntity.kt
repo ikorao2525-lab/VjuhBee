@@ -16,12 +16,15 @@ data class HarvestItemEntity(
     val unit: String
 )
 
-fun HarvestItemEntity.toModel() = HarvestItem(
-    product = HarvestProduct.entries.firstOrNull { it.code == product } ?: HarvestProduct.HONEY,
-    amount = amount,
-    unit = HarvestUnit.entries.firstOrNull { it.code == unit } ?: HarvestUnit.KG
-)
-
+fun HarvestItemEntity.toModel(): HarvestItem {
+    val parsedProduct = requireNotNull(HarvestProduct.entries.firstOrNull { it.code == product }) {
+        "Неизвестный код продукта урожая: $product"
+    }
+    val parsedUnit = requireNotNull(HarvestUnit.entries.firstOrNull { it.code == unit }) {
+        "Неизвестный код единицы урожая: $unit"
+    }
+    return HarvestItem(product = parsedProduct, amount = amount, unit = parsedUnit)
+}
 fun HarvestItem.toEntity(taskUuid: String) = HarvestItemEntity(
     taskUuid = taskUuid,
     product = product.code,
