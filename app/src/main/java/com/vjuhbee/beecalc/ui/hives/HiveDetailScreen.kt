@@ -2,9 +2,12 @@ package com.vjuhbee.beecalc.ui.hives
 
 import android.content.Intent
 import android.graphics.Bitmap
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,11 +22,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -40,6 +48,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
@@ -71,12 +81,15 @@ import com.vjuhbee.beecalc.utils.saveQrToCache
  * осмотры и обработки вперемешку, свежие сверху.
  */
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 fun HiveDetailScreen(
     onQuickReport: (String) -> Unit,
     onBack: () -> Unit,
     viewModel: HiveDetailViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var historyFiltersExpanded by remember { mutableStateOf(false) }
+    val historyFiltersActive = state.historyQuery.isNotBlank() || state.historyTypeFilter != HistoryTypeFilter.ALL || state.historyYear != null
 
     // После удаления улья возвращаемся к списку.
     LaunchedEffect(state.isDeleted) {
@@ -226,33 +239,45 @@ fun HiveDetailScreen(
         }
 
         item(key = "history_title") {
-            Text(
-                text = stringResource(R.string.hive_history_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp)
-            )
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.hive_history_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                IconButton(
+                    onClick = { historyFiltersExpanded = true },
+                    modifier = Modifier.clip(CircleShape).background(if (historyFiltersActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.hive_history_filters), tint = if (historyFiltersActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
-
         val history = buildHistory(state.inspections, state.treatments)
         if (history.isEmpty()) {
-            item(key = "history_empty") {
-                Text(
-                    text = stringResource(R.string.hive_history_empty),
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
+            item(key = "history_empty") { Text(stringResource(R.string.hive_history_empty), style = MaterialTheme.typography.bodyLarge) }
         }
         items(history, key = { it.key }) { entry ->
             when (entry) {
-                is HistoryEntry.InspectionEntry -> InspectionCard(
-                    inspection = entry.inspection,
-                    onDelete = { viewModel.deleteInspection(entry.inspection) }
-                )
-                is HistoryEntry.TreatmentEntry -> TreatmentCard(
-                    treatment = entry.treatment,
-                    onDelete = { viewModel.deleteTreatment(entry.treatment) }
-                )
+                is HistoryEntry.InspectionEntry -> InspectionCard(entry.inspection) { viewModel.deleteInspection(entry.inspection) }
+                is HistoryEntry.TreatmentEntry -> TreatmentCard(entry.treatment) { viewModel.deleteTreatment(entry.treatment) }
+            }
+        }
+    }
+
+    if (historyFiltersExpanded) {
+        Dialog(onDismissRequest = { historyFiltersExpanded = false }) {
+            Card(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(stringResource(R.string.hive_history_filters), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(value = state.historyQuery, onValueChange = viewModel::setHistoryQuery, label = { Text(stringResource(R.string.hive_history_search)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    Text(stringResource(R.string.hive_history_filter_type), style = MaterialTheme.typography.labelLarge)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = state.historyTypeFilter == HistoryTypeFilter.ALL, onClick = { viewModel.setHistoryTypeFilter(HistoryTypeFilter.ALL) }, label = { Text(stringResource(R.string.calendar_filter_all)) })
+                        FilterChip(selected = state.historyTypeFilter == HistoryTypeFilter.INSPECTIONS, onClick = { viewModel.setHistoryTypeFilter(HistoryTypeFilter.INSPECTIONS) }, label = { Text(stringResource(R.string.inspection_label)) })
+                        FilterChip(selected = state.historyTypeFilter == HistoryTypeFilter.TREATMENTS, onClick = { viewModel.setHistoryTypeFilter(HistoryTypeFilter.TREATMENTS) }, label = { Text(stringResource(R.string.treatment_label)) })
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = viewModel::clearHistoryFilters) { Text(stringResource(R.string.calendar_filter_clear)) }
+                        Button(onClick = { historyFiltersExpanded = false }) { Text(stringResource(R.string.calendar_filter_apply)) }
+                    }
+                }
             }
         }
     }

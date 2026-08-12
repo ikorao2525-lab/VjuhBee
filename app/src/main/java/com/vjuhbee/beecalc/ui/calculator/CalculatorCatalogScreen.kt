@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -20,17 +22,23 @@ import com.vjuhbee.beecalc.R
 @Composable
 fun CalculatorCatalogScreen(
     onSyrupClick: () -> Unit,
-    onCandiClick: () -> Unit
+    onCandiClick: () -> Unit,
+    onTreatmentClick: () -> Unit,
+    onExpansionClick: () -> Unit,
+    onWinterClick: () -> Unit,
+    onHoneyJarsClick: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(stringResource(R.string.calculators_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         CalculatorCard(R.string.calculator_syrup, R.string.calculator_syrup_description, onSyrupClick, true)
         CalculatorCard(R.string.calculator_candi, R.string.calculator_candi_description, onCandiClick, true)
-        CalculatorCard(R.string.calculator_winter, R.string.calculator_winter_description, {}, false)
-        CalculatorCard(R.string.calculator_honey_jars, R.string.calculator_honey_jars_description, {}, false)
+        CalculatorCard(R.string.calculator_treatment, R.string.calculator_treatment_description, onTreatmentClick, true)
+        CalculatorCard(R.string.calculator_expansion, R.string.calculator_expansion_description, onExpansionClick, true)
+        CalculatorCard(R.string.calculator_winter, R.string.calculator_winter_description, onWinterClick, true)
+        CalculatorCard(R.string.calculator_honey_jars, R.string.calculator_honey_jars_description, onHoneyJarsClick, true)
     }
 }
 

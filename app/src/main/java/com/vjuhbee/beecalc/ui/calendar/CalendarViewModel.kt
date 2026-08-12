@@ -26,7 +26,11 @@ data class TaskEditor(
 /** Ключ раскрытого месяца: год + месяц. */
 data class MonthKey(val year: Int, val month: Int)
 
+private data class FilterState(val query: String = "", val status: TaskStatusFilter = TaskStatusFilter.ALL, val category: TaskCategory? = null, val important: Boolean = false)
+
 /** Состояние экрана календаря. */
+enum class TaskStatusFilter { ALL, ACTIVE, DONE }
+
 data class CalendarUiState(
     val currentYear: Int,
     val currentMonth: Int,                                       // 1..12
@@ -37,7 +41,8 @@ data class CalendarUiState(
     val expandedMonths: Set<MonthKey> = emptySet(),
     val deletedTasks: List<CalendarTask> = emptyList(),
     val hives: List<Hive> = emptyList(),
-    val editor: TaskEditor? = null
+    val editor: TaskEditor? = null,
+    val searchQuery: String = "", val statusFilter: TaskStatusFilter = TaskStatusFilter.ALL, val categoryFilter: TaskCategory? = null, val importantOnly: Boolean = false
 )
 
 class CalendarViewModel(app: Application) : AndroidViewModel(app) {
@@ -52,6 +57,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     private val expandedYears = MutableStateFlow(setOf(currentYear))
     private val expandedMonths = MutableStateFlow(setOf(MonthKey(currentYear, currentMonth)))
     private val editor = MutableStateFlow<TaskEditor?>(null)
+    private val filters = MutableStateFlow(FilterState())
 
     val uiState: StateFlow<CalendarUiState> =
         combine(
@@ -89,7 +95,16 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 deletedTasks = deleted,
                 editor = editorState
             )
-        }.combine(hiveRepository.observeHives()) { state, hives ->
+        }.combine(filters) { state, filter ->
+            val filteredByYear = state.tasksByYearMonth.mapValues { (_, months) ->
+                months.mapValues { (_, tasks) -> tasks.filter { task ->
+                    (filter.query.isBlank() || task.title.contains(filter.query, true) || task.shortDescription.contains(filter.query, true)) &&
+                        (filter.status == TaskStatusFilter.ALL || (filter.status == TaskStatusFilter.ACTIVE && !task.isDone) || (filter.status == TaskStatusFilter.DONE && task.isDone)) &&
+                        (filter.category == null || task.category == filter.category) &&
+                        (!filter.important || task.importance == com.vjuhbee.beecalc.model.Importance.HIGH)
+                } }
+            }
+            state.copy(tasksByYearMonth = filteredByYear, searchQuery = filter.query, statusFilter = filter.status, categoryFilter = filter.category, importantOnly = filter.important)        }.combine(hiveRepository.observeHives()) { state, hives ->
             state.copy(hives = hives)
         }.stateIn(
             scope = viewModelScope,
@@ -105,6 +120,12 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch { repository.prepareYear(currentYear) }
     }
+
+    fun setSearchQuery(value: String) { filters.update { it.copy(query = value) } }
+    fun setStatusFilter(value: TaskStatusFilter) { filters.update { it.copy(status = value) } }
+    fun setCategoryFilter(value: TaskCategory?) { filters.update { it.copy(category = value) } }
+    fun setImportantOnly(value: Boolean) { filters.update { it.copy(important = value) } }
+    fun clearFilters() { filters.value = FilterState() }
 
     fun toggleYear(year: Int) {
         expandedYears.update { if (year in it) it - year else it + year }
