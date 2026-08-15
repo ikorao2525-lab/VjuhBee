@@ -23,7 +23,9 @@ interface HiveRepository {
     suspend fun allHives(): List<Hive>
     suspend fun hivesForApiary(apiaryUuid: String): List<Hive>
     suspend fun allInspections(): List<Inspection>
+    suspend fun inspectionsForApiary(apiaryUuid: String): List<Inspection>
     suspend fun allTreatments(): List<Treatment>
+    suspend fun treatmentsForApiary(apiaryUuid: String): List<Treatment>
 
     /** Удаляет улей вместе со всей историей (каскад в базе). */
     suspend fun deleteHive(hive: Hive)
@@ -62,8 +64,14 @@ class RoomHiveRepository(private val dao: HiveDao) : HiveRepository {
     override suspend fun allInspections(): List<Inspection> =
         dao.allInspections().map { it.toModel() }
 
+    override suspend fun inspectionsForApiary(apiaryUuid: String): List<Inspection> =
+        dao.inspectionsByApiary(apiaryUuid).map { it.toModel() }
+
     override suspend fun allTreatments(): List<Treatment> =
         dao.allTreatments().map { it.toModel() }
+
+    override suspend fun treatmentsForApiary(apiaryUuid: String): List<Treatment> =
+        dao.treatmentsByApiary(apiaryUuid).map { it.toModel() }
 
     override suspend fun addHive(hive: Hive): Long = dao.insertHive(hive.toEntity())
 

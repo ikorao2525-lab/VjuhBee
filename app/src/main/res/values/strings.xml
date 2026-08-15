@@ -313,6 +313,7 @@
     <string name="diagnostics_share">Поделиться журналом</string>
     <string name="diagnostics_share_subject">Диагностический журнал BeeCalc</string>
     <string name="diagnostics_clear">Очистить журнал</string>
+    <string name="diagnostics_back">Назад к инструментам</string>
     <string name="tools_qr_title">Сканировать QR</string>
     <string name="tools_qr_desc">Навести камеру на QR-код улья</string>
     <string name="tools_sync_title">Синхронизация</string>

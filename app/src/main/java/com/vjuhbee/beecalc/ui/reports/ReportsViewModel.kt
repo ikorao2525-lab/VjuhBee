@@ -79,8 +79,8 @@ class ReportsViewModel(app: Application) : AndroidViewModel(app) {
         val currentApiary = userApiaryRepository.getActiveApiaryUuid()
         val hives = if (currentApiary.isNullOrBlank()) beeCalcApp.hiveRepository.allHives() else beeCalcApp.hiveRepository.hivesForApiary(currentApiary)
         val tasks = if (currentApiary.isNullOrBlank()) beeCalcApp.calendarRepository.allTasks() else beeCalcApp.calendarRepository.allTasksForApiary(currentApiary)
-        val inspections = beeCalcApp.hiveRepository.allInspections()
-        val treatments = beeCalcApp.hiveRepository.allTreatments()
+        val inspections = if (currentApiary.isNullOrBlank()) beeCalcApp.hiveRepository.allInspections() else beeCalcApp.hiveRepository.inspectionsForApiary(currentApiary)
+        val treatments = if (currentApiary.isNullOrBlank()) beeCalcApp.hiveRepository.allTreatments() else beeCalcApp.hiveRepository.treatmentsForApiary(currentApiary)
         loadedRecords.value = Records(
             hives = hives,
             tasks = tasks,

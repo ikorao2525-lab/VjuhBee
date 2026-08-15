@@ -74,7 +74,9 @@ class SyncRepositoryTest {
         override suspend fun allHives(): List<Hive> = emptyList()
         override suspend fun hivesForApiary(apiaryUuid: String): List<Hive> = emptyList()
         override suspend fun allInspections(): List<Inspection> = emptyList()
+        override suspend fun inspectionsForApiary(apiaryUuid: String): List<Inspection> = emptyList()
         override suspend fun allTreatments(): List<Treatment> = emptyList()
+        override suspend fun treatmentsForApiary(apiaryUuid: String): List<Treatment> = emptyList()
         override suspend fun deleteHive(hive: Hive) = Unit
         override fun observeInspections(hiveId: Int): Flow<List<Inspection>> = emptyFlow()
         override suspend fun addInspection(inspection: Inspection) = Unit

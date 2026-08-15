@@ -49,6 +49,6 @@ fun DiagnosticsScreen(onBack: () -> Unit) {
             context.startActivity(Intent.createChooser(intent, shareTitle))
         }, enabled = text.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.diagnostics_share)) }
         OutlinedButton(onClick = { logger.clear(); text = "" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.diagnostics_clear)) }
-        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.calculator_back)) }
+        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.diagnostics_back)) }
     }
 }
