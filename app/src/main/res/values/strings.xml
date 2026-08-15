@@ -405,4 +405,41 @@
     <string name="hive_summary_harvest_empty">Урожай: пока нет данных</string>
     <string name="sync_export_share_title">Отправить пасеку</string>
     <string name="sync_backup_info">%1$s · %2$s Б</string>
-    <string name="sync_file_metadata_value">%1$s, версия %2$s, %3$d ульев, %4$d работ</string></resources>
+    <string name="sync_file_metadata_value">%1$s, версия %2$s, %3$d ульев, %4$d работ</string>
+
+    <!-- Онбординг первого запуска (v0.9.0) -->
+    <string name="onboarding_step1_title">Добро пожаловать в BeeCalc!</string>
+    <string name="onboarding_step1_desc">Укажите, кто ведёт учёт пасеки — частный пчеловод или организация:</string>
+    <string name="onboarding_name_hint">Ваше имя или название организации</string>
+    <string name="onboarding_step2_title">Ваши пасеки</string>
+    <string name="onboarding_step2_desc">Укажите название вашей первой пасеки (точка):</string>
+    <string name="onboarding_apiary_hint">Например: Основная, Лесная, Точок 1</string>
+    <string name="onboarding_step3_title">Начало работы</string>
+    <string name="onboarding_step3_desc">Как вы хотите начать заполнение пасеки?</string>
+    <string name="onboarding_next">Далее →</string>
+    <string name="onboarding_start_empty">Пустая пасека</string>
+    <string name="onboarding_start_demo">Загрузить демо-пасеку</string>
+    <string name="tools_apiaries_title">Пасеки и профили</string>
+    <string name="tools_apiaries_desc">Управление точками, пасеками и переключение профилей владельца</string>
+    <string name="apiaries_management_title">Пасеки и профили</string>
+    <string name="profiles_section_title">Профили (пчеловоды / организации)</string>
+    <string name="apiaries_section_title">Пасеки текущего профиля</string>
+    <string name="add_profile">+ Добавить профиль</string>
+    <string name="add_apiary">+ Добавить пасеку</string>
+    <string name="new_profile_title">Новый профиль</string>
+    <string name="edit_profile_title">Изменить профиль</string>
+    <string name="profile_name_label">Имя или название организации</string>
+    <string name="profile_type_individual">Частный пчеловод</string>
+    <string name="profile_type_company">Организация / КФХ</string>
+    <string name="new_apiary_title">Новая пасека</string>
+    <string name="edit_apiary_title">Изменить пасеку</string>
+    <string name="apiary_name_label">Название пасеки</string>
+    <string name="apiary_address_label">Местоположение / адрес</string>
+    <string name="apiary_note_label">Заметка</string>
+    <string name="delete_profile_confirm">Удалить профиль «%1$s» и все его пасеки с ульями и работами?</string>
+    <string name="delete_apiary_confirm">Удалить пасеку «%1$s» и все ульи и работы на ней?</string>
+    <string name="cannot_delete_last_profile">Нельзя удалить единственный профиль</string>
+    <string name="cannot_delete_last_apiary">Нельзя удалить единственную пасеку</string>
+    <string name="switch_apiary_dialog_title">Выбор пасеки</string>
+    <string name="manage_apiaries_action">Управление пасеками →</string>
+</resources>

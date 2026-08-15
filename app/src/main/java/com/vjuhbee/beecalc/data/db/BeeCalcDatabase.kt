@@ -19,9 +19,11 @@ import java.util.Calendar
         HiveEntity::class,
         InspectionEntity::class,
         TreatmentEntity::class,
-        HarvestItemEntity::class
+        HarvestItemEntity::class,
+        UserEntity::class,
+        ApiaryEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class BeeCalcDatabase : RoomDatabase() {
@@ -29,6 +31,8 @@ abstract class BeeCalcDatabase : RoomDatabase() {
     abstract fun calendarTaskDao(): CalendarTaskDao
     abstract fun hiveDao(): HiveDao
     abstract fun harvestItemDao(): HarvestItemDao
+    abstract fun userDao(): UserDao
+    abstract fun apiaryDao(): ApiaryDao
 
     companion object {
 
@@ -210,11 +214,71 @@ abstract class BeeCalcDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE calendar_tasks ADD COLUMN dueDateMillis INTEGER")
             }
         }
+
+        /**
+         * v10 → v11: мультипользователи и мультипасеки (SPEC.md §9, v0.9.0).
+         * Таблицы users и apiaries; в hives и calendar_tasks добавляется apiaryUuid.
+         * Существующие данные связываются с профилем по умолчанию и основной пасекой.
+         */
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                val now = System.currentTimeMillis()
+                // 1. Создание таблицы пользователей
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS users (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "uuid TEXT NOT NULL, " +
+                        "name TEXT NOT NULL, " +
+                        "type TEXT NOT NULL DEFAULT 'individual', " +
+                        "createdAt INTEGER NOT NULL DEFAULT 0, " +
+                        "updatedAt INTEGER NOT NULL DEFAULT 0)"
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_users_uuid ON users(uuid)")
+
+                // 2. Создание таблицы пасек
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS apiaries (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "uuid TEXT NOT NULL, " +
+                        "userUuid TEXT NOT NULL, " +
+                        "name TEXT NOT NULL, " +
+                        "note TEXT NOT NULL DEFAULT '', " +
+                        "address TEXT NOT NULL DEFAULT '', " +
+                        "createdAt INTEGER NOT NULL DEFAULT 0, " +
+                        "updatedAt INTEGER NOT NULL DEFAULT 0, " +
+                        "FOREIGN KEY(userUuid) REFERENCES users(uuid) ON UPDATE NO ACTION ON DELETE CASCADE)"
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_apiaries_uuid ON apiaries(uuid)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_apiaries_userUuid ON apiaries(userUuid)")
+
+                // 3. Создание пользователя по умолчанию и основной пасеки со стабильными UUID
+                val defaultUserUuid = java.util.UUID.randomUUID().toString()
+                val defaultApiaryUuid = java.util.UUID.randomUUID().toString()
+
+                db.execSQL(
+                    "INSERT INTO users (uuid, name, type, createdAt, updatedAt) " +
+                        "VALUES ('$defaultUserUuid', 'Мой профиль', 'individual', $now, $now)"
+                )
+                db.execSQL(
+                    "INSERT INTO apiaries (uuid, userUuid, name, note, address, createdAt, updatedAt) " +
+                        "VALUES ('$defaultApiaryUuid', '$defaultUserUuid', 'Основная пасека', '', '', $now, $now)"
+                )
+
+                // 4. Добавление apiaryUuid в hives и calendar_tasks
+                db.execSQL("ALTER TABLE hives ADD COLUMN apiaryUuid TEXT NOT NULL DEFAULT '$defaultApiaryUuid'")
+                db.execSQL("UPDATE hives SET apiaryUuid = '$defaultApiaryUuid'")
+
+                db.execSQL("ALTER TABLE calendar_tasks ADD COLUMN apiaryUuid TEXT NOT NULL DEFAULT '$defaultApiaryUuid'")
+                db.execSQL("UPDATE calendar_tasks SET apiaryUuid = '$defaultApiaryUuid'")
+            }
+        }
+
         fun build(context: Context): BeeCalcDatabase =
             Room.databaseBuilder(context, BeeCalcDatabase::class.java, "beecalc.db")
                 .addMigrations(
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
+                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
+                    MIGRATION_10_11
                 )
                 .build()
     }

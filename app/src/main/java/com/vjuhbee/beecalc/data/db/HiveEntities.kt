@@ -22,6 +22,8 @@ data class HiveEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
     val note: String,
+    /** UUID пасеки, к которой привязан улей. */
+    val apiaryUuid: String = "",
     /** Постоянный публичный id улья (SPEC.md §9, v0.4): QR-коды и перенос базы. */
     val uuid: String,
     /** Время последнего изменения (мс). */
@@ -81,8 +83,8 @@ data class TreatmentEntity(
     val updatedAt: Long = 0L
 )
 
-fun HiveEntity.toModel() = Hive(id = id, name = name, note = note, uuid = uuid, updatedAt = updatedAt)
-fun Hive.toEntity() = HiveEntity(id = id, name = name, note = note, uuid = uuid, updatedAt = updatedAt)
+fun HiveEntity.toModel() = Hive(id = id, name = name, note = note, apiaryUuid = apiaryUuid, uuid = uuid, updatedAt = updatedAt)
+fun Hive.toEntity() = HiveEntity(id = id, name = name, note = note, apiaryUuid = apiaryUuid, uuid = uuid, updatedAt = updatedAt)
 
 fun InspectionEntity.toModel() = Inspection(
     id = id, hiveId = hiveId, date = date,

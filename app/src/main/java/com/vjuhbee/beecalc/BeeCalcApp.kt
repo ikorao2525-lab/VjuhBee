@@ -5,6 +5,8 @@ import com.vjuhbee.beecalc.data.CalendarRepository
 import com.vjuhbee.beecalc.data.HiveRepository
 import com.vjuhbee.beecalc.data.RoomCalendarRepository
 import com.vjuhbee.beecalc.data.RoomHiveRepository
+import com.vjuhbee.beecalc.data.RoomUserAndApiaryRepository
+import com.vjuhbee.beecalc.data.UserAndApiaryRepository
 import com.vjuhbee.beecalc.data.db.BeeCalcDatabase
 import com.vjuhbee.beecalc.data.sync.SyncRepository
 import com.vjuhbee.beecalc.diagnostics.DiagnosticLogger
@@ -30,6 +32,9 @@ class BeeCalcApp : Application() {
         diagnosticLogger.info("Application started")
     }
     val database: BeeCalcDatabase by lazy { BeeCalcDatabase.build(this) }
+    val userAndApiaryRepository: UserAndApiaryRepository by lazy {
+        RoomUserAndApiaryRepository(this, database.userDao(), database.apiaryDao())
+    }
     val calendarRepository: CalendarRepository by lazy {
         RoomCalendarRepository(database.calendarTaskDao(), database.harvestItemDao())
     }

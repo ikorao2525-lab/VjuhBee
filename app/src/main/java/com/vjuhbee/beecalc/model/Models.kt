@@ -70,6 +70,8 @@ data class CalendarTask(
     val id: Int,                         // 0 = новая, id выдаст база
     val year: Int = 0,                   // год выставляется при сохранении
     val month: Int,                      // 1..12
+    /** UUID пасеки, к которой относится задача. */
+    val apiaryUuid: String = "",
     /** Необязательная дата выполнения, начало дня в системном часовом поясе. */
     val dueDateMillis: Long? = null,
     val title: String,
@@ -125,6 +127,8 @@ data class Hive(
     val id: Int,          // 0 = новый, id выдаст база
     val name: String,
     val note: String = "",
+    /** UUID пасеки, к которой принадлежит улей. */
+    val apiaryUuid: String = "",
     /**
      * Постоянный публичный идентификатор улья (SPEC.md §9, v0.4).
      * Не зависит от внутреннего id базы — переживает перенос базы на
@@ -163,3 +167,32 @@ data class Treatment(
     /** Время последнего изменения (мс). */
     val updatedAt: Long = 0L
 )
+
+/** Тип профиля владельца пасеки. */
+enum class ProfileType(val code: String) {
+    INDIVIDUAL("individual"),
+    COMPANY("company")
+}
+
+/** Профиль пользователя или организации. */
+data class UserProfile(
+    val id: Int = 0,
+    val uuid: String = "",
+    val name: String,
+    val type: ProfileType = ProfileType.INDIVIDUAL,
+    val createdAt: Long = 0L,
+    val updatedAt: Long = 0L
+)
+
+/** Пасека / точок. */
+data class Apiary(
+    val id: Int = 0,
+    val uuid: String = "",
+    val userUuid: String = "",
+    val name: String,
+    val note: String = "",
+    val address: String = "",
+    val createdAt: Long = 0L,
+    val updatedAt: Long = 0L
+)
+

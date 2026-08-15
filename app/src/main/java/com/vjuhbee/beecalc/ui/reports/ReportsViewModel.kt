@@ -11,16 +11,18 @@ import com.vjuhbee.beecalc.model.HarvestItem
 import com.vjuhbee.beecalc.model.HarvestProduct
 import com.vjuhbee.beecalc.model.HarvestUnit
 import com.vjuhbee.beecalc.model.Treatment
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
 
- data class ReportRange(
+data class ReportRange(
     val startMillis: Long?,
     val endMillis: Long?,
     val label: String
@@ -48,45 +50,55 @@ data class ReportsUiState(
     val report: ReportData? = null
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ReportsViewModel(app: Application) : AndroidViewModel(app) {
     private val beeCalcApp = app as BeeCalcApp
+    private val userApiaryRepository = beeCalcApp.userAndApiaryRepository
     private val selectedHiveUuid = MutableStateFlow<String?>(null)
     private val loadedRecords = MutableStateFlow(Records())
 
-    val uiState: StateFlow<ReportsUiState> = combine(
-        beeCalcApp.hiveRepository.observeHives(), selectedHiveUuid, loadedRecords
-    ) { hives, selected, records ->
-        ReportsUiState(hives = hives, selectedHiveUuid = selected, report = records.report)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReportsUiState())
+    val uiState: StateFlow<ReportsUiState> =
+        userApiaryRepository.observeActiveApiaryUuid().flatMapLatest { apiaryUuid ->
+            val hivesFlow = if (apiaryUuid.isNullOrBlank()) {
+                beeCalcApp.hiveRepository.observeHives()
+            } else {
+                beeCalcApp.hiveRepository.observeHivesForApiary(apiaryUuid)
+            }
+            combine(hivesFlow, selectedHiveUuid, loadedRecords) { hives, selected, records ->
+                ReportsUiState(hives = hives, selectedHiveUuid = selected, report = records.report)
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReportsUiState())
 
     init {
         viewModelScope.launch {
-            loadedRecords.value = Records(
-                hives = beeCalcApp.hiveRepository.allHives(),
-                tasks = beeCalcApp.calendarRepository.allTasks(),
-                inspections = beeCalcApp.hiveRepository.allInspections(),
-                treatments = beeCalcApp.hiveRepository.allTreatments()
-            )
+            refreshRecords()
         }
+    }
+
+    private suspend fun refreshRecords() {
+        val currentApiary = userApiaryRepository.getActiveApiaryUuid()
+        val hives = if (currentApiary.isNullOrBlank()) beeCalcApp.hiveRepository.allHives() else beeCalcApp.hiveRepository.hivesForApiary(currentApiary)
+        val tasks = if (currentApiary.isNullOrBlank()) beeCalcApp.calendarRepository.allTasks() else beeCalcApp.calendarRepository.allTasksForApiary(currentApiary)
+        val inspections = beeCalcApp.hiveRepository.allInspections()
+        val treatments = beeCalcApp.hiveRepository.allTreatments()
+        loadedRecords.value = Records(
+            hives = hives,
+            tasks = tasks,
+            inspections = inspections,
+            treatments = treatments
+        )
     }
 
     fun selectHive(uuid: String?) { selectedHiveUuid.value = uuid }
 
     fun generate(kind: ReportKind, period: ReportPeriod, customStart: Long? = null, customEnd: Long? = null) {
         viewModelScope.launch {
-            generateFromRecords(
-                Records(
-                    hives = beeCalcApp.hiveRepository.allHives(),
-                    tasks = beeCalcApp.calendarRepository.allTasks(),
-                    inspections = beeCalcApp.hiveRepository.allInspections(),
-                    treatments = beeCalcApp.hiveRepository.allTreatments()
-                ), kind, period, customStart, customEnd
-            )
+            refreshRecords()
+            generateFromRecords(loadedRecords.value, kind, period, customStart, customEnd)
         }
     }
 
     private fun generateFromRecords(records: Records, kind: ReportKind, period: ReportPeriod, customStart: Long? = null, customEnd: Long? = null) {
-        val records = loadedRecords.value
         val hive = if (kind == ReportKind.HIVE) {
             records.hives.firstOrNull { it.uuid == selectedHiveUuid.value }
         } else null
@@ -106,8 +118,7 @@ class ReportsViewModel(app: Application) : AndroidViewModel(app) {
                 },
                 treatments = records.treatments.filter { item ->
                     (hiveId == null || item.hiveId == hiveId) && item.date.inRange(range)
-                }
-,
+                },
                 harvestTotals = harvestItemsFor(records.tasks, kind, hiveUuid, range).summarize(),
                 harvestByMonth = harvestItemsFor(records.tasks, kind, hiveUuid, range).groupBy { it.first.year to it.first.month }
                     .mapValues { (_, items) -> items.flatMap { it.second }.let { harvestItems -> harvestItems.groupBy { it.product to it.unit }.map { (key, values) -> HarvestSummary(key.first, key.second, values.sumOf { it.amount }) }.sortedWith(compareBy({ it.product.name }, { it.unit.code })) } }
@@ -133,6 +144,7 @@ class ReportsViewModel(app: Application) : AndroidViewModel(app) {
             .groupBy { it.product to it.unit }
             .map { (key, items) -> HarvestSummary(key.first, key.second, items.sumOf { it.amount }) }
             .sortedWith(compareBy({ it.product.name }, { it.unit.code }))
+
     private data class Records(
         val hives: List<Hive> = emptyList(), val tasks: List<CalendarTask> = emptyList(),
         val inspections: List<Inspection> = emptyList(), val treatments: List<Treatment> = emptyList(),
@@ -170,4 +182,3 @@ class ReportsViewModel(app: Application) : AndroidViewModel(app) {
         return "${format.format(start)} — ${format.format(end)}"
     }
 }
-

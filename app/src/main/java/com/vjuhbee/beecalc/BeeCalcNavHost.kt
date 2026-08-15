@@ -39,6 +39,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import android.net.Uri
+import com.vjuhbee.beecalc.data.UserAndApiaryRepository
 import com.vjuhbee.beecalc.ui.about.AboutScreen
 import com.vjuhbee.beecalc.ui.calculator.CalculatorScreen
 import com.vjuhbee.beecalc.ui.calculator.CalculatorCatalogScreen
@@ -53,7 +54,10 @@ import com.vjuhbee.beecalc.ui.hives.HivesScreen
 import com.vjuhbee.beecalc.ui.hives.QrScannerScreen
 import com.vjuhbee.beecalc.ui.sync.SyncScreen
 import com.vjuhbee.beecalc.ui.tools.ToolsScreen
+import com.vjuhbee.beecalc.ui.tools.ApiariesScreen
 import com.vjuhbee.beecalc.ui.tools.DiagnosticsScreen
+import com.vjuhbee.beecalc.ui.components.ApiaryTopBarSelector
+import com.vjuhbee.beecalc.ui.components.OnboardingDialog
 import com.vjuhbee.beecalc.ui.home.HomeScreen
 import com.vjuhbee.beecalc.data.DemoApiaryData
 import com.vjuhbee.beecalc.ui.reports.ReportsScreen
@@ -101,13 +105,8 @@ fun BeeCalcNavHost() {
             if (showTopBar) {
                 TopAppBar(
                     title = {
-                        Text(
-                            text = if (BuildConfig.IS_BETA) {
-                                stringResource(R.string.app_name_beta)
-                            } else {
-                                stringResource(R.string.app_name)
-                            },
-                            style = MaterialTheme.typography.titleLarge
+                        ApiaryTopBarSelector(
+                            onManageClick = { navController.navigate("apiaries") }
                         )
                     },
                     actions = {
@@ -190,10 +189,12 @@ fun BeeCalcNavHost() {
             composable("tools") {
                 ToolsScreen(
                     onScanClick = { navController.navigate("qr-scan") },
+                    onApiariesClick = { navController.navigate("apiaries") },
                     onSyncClick = { navController.navigate("sync") },
                     onReportsClick = { navController.navigate("reports") }, onReportScanClick = { navController.navigate("report-qr-scan") }, onDiagnosticsClick = { navController.navigate("diagnostics") }
                 )
             }
+            composable("apiaries") { ApiariesScreen(onBack = { navController.popBackStack() }) }
             composable("diagnostics") { DiagnosticsScreen(onBack = { navController.popBackStack() }) }
             composable("reports") { ReportsScreen(onBack = { navController.popBackStack() }) }
             composable("report-qr-scan") { ReportQrScannerScreen(onBack = { navController.popBackStack() }) }
@@ -250,24 +251,22 @@ fun BeeCalcNavHost() {
     }
 
     if (startupChoiceVisible) {
-        AlertDialog(
-            onDismissRequest = { },
-            title = { Text(stringResource(R.string.startup_choice_title)) },
-            text = { Text(stringResource(R.string.startup_choice_text)) },
-            confirmButton = {
-                TextButton(onClick = {
+        OnboardingDialog(
+            onFinish = { profileName, profileType, apiaryName, isDemo ->
+                scope.launch {
+                    val userApiaryRepo = (context.applicationContext as BeeCalcApp).userAndApiaryRepository
+                    val user = userApiaryRepo.createUser(profileName, profileType)
+                    val apiary = userApiaryRepo.createApiary(user.uuid, apiaryName)
+                    userApiaryRepo.setActiveUser(user.uuid)
+                    userApiaryRepo.setActiveApiary(apiary.uuid)
+
+                    if (isDemo) {
+                        DemoApiaryData.seed(hiveRepository, (context.applicationContext as BeeCalcApp).calendarRepository, apiary.uuid)
+                    }
+
                     context.getSharedPreferences("beecalc", 0).edit().putBoolean("startup_choice_done", true).apply()
                     startupChoiceVisible = false
-                }) { Text(stringResource(R.string.startup_empty)) }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    scope.launch {
-                        DemoApiaryData.seed(hiveRepository, (context.applicationContext as BeeCalcApp).calendarRepository)
-                        context.getSharedPreferences("beecalc", 0).edit().putBoolean("startup_choice_done", true).apply()
-                        startupChoiceVisible = false
-                    }
-                }) { Text(stringResource(R.string.startup_demo)) }
+                }
             }
         )
     }

@@ -13,11 +13,17 @@ interface HiveDao {
     @Query("SELECT * FROM hives ORDER BY name")
     fun observeHives(): Flow<List<HiveEntity>>
 
+    @Query("SELECT * FROM hives WHERE apiaryUuid = :apiaryUuid ORDER BY name")
+    fun observeHivesByApiary(apiaryUuid: String): Flow<List<HiveEntity>>
+
     @Query("SELECT * FROM hives WHERE id = :id")
     fun observeHive(id: Int): Flow<HiveEntity?>
 
     @Query("SELECT * FROM hives")
     suspend fun allHives(): List<HiveEntity>
+
+    @Query("SELECT * FROM hives WHERE apiaryUuid = :apiaryUuid")
+    suspend fun hivesByApiary(apiaryUuid: String): List<HiveEntity>
 
     @Query("SELECT * FROM inspections")
     suspend fun allInspections(): List<InspectionEntity>

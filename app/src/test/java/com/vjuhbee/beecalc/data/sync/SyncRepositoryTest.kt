@@ -51,23 +51,28 @@ class SyncRepositoryTest {
         private val tasks: List<CalendarTask>
     ) : CalendarRepository {
         override fun observeTasks(): Flow<List<CalendarTask>> = emptyFlow()
+        override fun observeTasksForApiary(apiaryUuid: String): Flow<List<CalendarTask>> = emptyFlow()
         override fun observeDeleted(): Flow<List<CalendarTask>> = emptyFlow()
+        override fun observeDeletedForApiary(apiaryUuid: String): Flow<List<CalendarTask>> = emptyFlow()
         override suspend fun addTask(task: CalendarTask) = Unit
         override suspend fun updateTask(task: CalendarTask) = Unit
         override suspend fun allTasks(): List<CalendarTask> = tasks
+        override suspend fun allTasksForApiary(apiaryUuid: String): List<CalendarTask> = tasks
         override suspend fun moveToTrash(task: CalendarTask) = Unit
         override suspend fun restoreFromTrash(task: CalendarTask) = Unit
         override suspend fun deleteForever(task: CalendarTask) = Unit
-        override suspend fun prepareYear(year: Int) = Unit
+        override suspend fun prepareYear(year: Int, apiaryUuid: String) = Unit
     }
 
     private class FakeHiveRepository : HiveRepository {
         override fun observeHives(): Flow<List<Hive>> = emptyFlow()
+        override fun observeHivesForApiary(apiaryUuid: String): Flow<List<Hive>> = emptyFlow()
         override fun observeHive(id: Int): Flow<Hive?> = emptyFlow()
         override suspend fun findHiveByUuid(uuid: String): Hive? = null
         override suspend fun addHive(hive: Hive): Long = 0L
         override suspend fun updateHive(hive: Hive) = Unit
         override suspend fun allHives(): List<Hive> = emptyList()
+        override suspend fun hivesForApiary(apiaryUuid: String): List<Hive> = emptyList()
         override suspend fun allInspections(): List<Inspection> = emptyList()
         override suspend fun allTreatments(): List<Treatment> = emptyList()
         override suspend fun deleteHive(hive: Hive) = Unit

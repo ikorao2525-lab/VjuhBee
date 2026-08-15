@@ -10,14 +10,17 @@ import kotlinx.coroutines.flow.combine
 
 interface CalendarRepository {
     fun observeTasks(): Flow<List<CalendarTask>>
+    fun observeTasksForApiary(apiaryUuid: String): Flow<List<CalendarTask>>
     fun observeDeleted(): Flow<List<CalendarTask>>
+    fun observeDeletedForApiary(apiaryUuid: String): Flow<List<CalendarTask>>
     suspend fun addTask(task: CalendarTask)
     suspend fun updateTask(task: CalendarTask)
     suspend fun allTasks(): List<CalendarTask>
+    suspend fun allTasksForApiary(apiaryUuid: String): List<CalendarTask>
     suspend fun moveToTrash(task: CalendarTask)
     suspend fun restoreFromTrash(task: CalendarTask)
     suspend fun deleteForever(task: CalendarTask)
-    suspend fun prepareYear(year: Int)
+    suspend fun prepareYear(year: Int, apiaryUuid: String = "")
 }
 
 class RoomCalendarRepository(
@@ -32,8 +35,14 @@ class RoomCalendarRepository(
     override fun observeTasks(): Flow<List<CalendarTask>> =
         combine(dao.observeActive(), harvestDao.observeAll()) { tasks, items -> mergeHarvest(tasks, items) }
 
+    override fun observeTasksForApiary(apiaryUuid: String): Flow<List<CalendarTask>> =
+        combine(dao.observeActiveByApiary(apiaryUuid), harvestDao.observeAll()) { tasks, items -> mergeHarvest(tasks, items) }
+
     override fun observeDeleted(): Flow<List<CalendarTask>> =
         combine(dao.observeDeleted(), harvestDao.observeAll()) { tasks, items -> mergeHarvest(tasks, items) }
+
+    override fun observeDeletedForApiary(apiaryUuid: String): Flow<List<CalendarTask>> =
+        combine(dao.observeDeletedByApiary(apiaryUuid), harvestDao.observeAll()) { tasks, items -> mergeHarvest(tasks, items) }
 
     private suspend fun saveHarvest(task: CalendarTask) {
         harvestDao.deleteForTask(task.uuid)
@@ -53,6 +62,9 @@ class RoomCalendarRepository(
     override suspend fun allTasks(): List<CalendarTask> =
         mergeHarvest(dao.allTasks(), harvestDao.all()).toList()
 
+    override suspend fun allTasksForApiary(apiaryUuid: String): List<CalendarTask> =
+        mergeHarvest(dao.allTasksByApiary(apiaryUuid), harvestDao.all()).toList()
+
     override suspend fun moveToTrash(task: CalendarTask) {
         dao.update(task.copy(isDeleted = true).toEntity())
     }
@@ -66,17 +78,29 @@ class RoomCalendarRepository(
         harvestDao.deleteForTask(task.uuid)
     }
 
-    override suspend fun prepareYear(year: Int) {
-        if (dao.count() == 0) {
-            dao.insertAll(DefaultCalendarTasks.tasks.map { it.copy(year = year).toEntity() })
+    override suspend fun prepareYear(year: Int, apiaryUuid: String) {
+        if (dao.countByApiary(apiaryUuid) == 0) {
+            val now = System.currentTimeMillis()
+            dao.insertAll(DefaultCalendarTasks.tasks.map {
+                it.copy(
+                    year = year,
+                    apiaryUuid = apiaryUuid,
+                    uuid = java.util.UUID.randomUUID().toString(),
+                    updatedAt = now
+                ).toEntity()
+            })
             return
         }
-        if (dao.countForYear(year) > 0) return
-        val lastYear = dao.latestYear() ?: return
-        val carriedOver = dao.activeTasksForYear(lastYear).map { entity ->
+        if (dao.countForYearByApiary(year, apiaryUuid) > 0) return
+        val lastYear = dao.latestYearByApiary(apiaryUuid) ?: return
+        val now = System.currentTimeMillis()
+        val carriedOver = dao.activeTasksForYearByApiary(lastYear, apiaryUuid).map { entity ->
             entity.copy(
                 id = 0,
                 year = year,
+                apiaryUuid = apiaryUuid,
+                uuid = java.util.UUID.randomUUID().toString(),
+                updatedAt = now,
                 isDone = false,
                 honeyKg = null,
                 honeyLiters = null,

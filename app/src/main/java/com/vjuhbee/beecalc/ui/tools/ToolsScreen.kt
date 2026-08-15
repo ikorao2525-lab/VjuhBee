@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -28,16 +30,23 @@ import com.vjuhbee.beecalc.R
 @Composable
 fun ToolsScreen(
     onScanClick: () -> Unit,
+    onApiariesClick: () -> Unit,
     onSyncClick: () -> Unit,
     onReportsClick: () -> Unit,
     onReportScanClick: () -> Unit,
     onDiagnosticsClick: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(stringResource(R.string.tools_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        ToolCard(stringResource(R.string.tools_apiaries_title), stringResource(R.string.tools_apiaries_desc), onApiariesClick) {
+            Icon(Icons.Filled.Assessment, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
+        }
         ToolCard(stringResource(R.string.tools_qr_title), stringResource(R.string.tools_qr_desc), onScanClick) {
             Icon(Icons.Filled.QrCodeScanner, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
         }

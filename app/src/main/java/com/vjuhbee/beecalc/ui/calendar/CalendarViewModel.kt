@@ -4,14 +4,17 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vjuhbee.beecalc.BeeCalcApp
+import com.vjuhbee.beecalc.data.UserAndApiaryRepository
 import com.vjuhbee.beecalc.model.CalendarTask
 import com.vjuhbee.beecalc.model.Hive
 import com.vjuhbee.beecalc.model.TaskCategory
 import com.vjuhbee.beecalc.model.YearHarvestTotals
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -45,10 +48,13 @@ data class CalendarUiState(
     val searchQuery: String = "", val statusFilter: TaskStatusFilter = TaskStatusFilter.ALL, val categoryFilter: TaskCategory? = null, val importantOnly: Boolean = false
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val repository = (app as BeeCalcApp).calendarRepository
-    private val hiveRepository = (app as BeeCalcApp).hiveRepository
+    private val beeCalcApp = app as BeeCalcApp
+    private val repository = beeCalcApp.calendarRepository
+    private val hiveRepository = beeCalcApp.hiveRepository
+    private val userApiaryRepository = beeCalcApp.userAndApiaryRepository
 
     private val currentYear = Calendar.getInstance().get(Calendar.YEAR)
     private val currentMonth = Calendar.getInstance().get(Calendar.MONTH) + 1
@@ -60,52 +66,59 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     private val filters = MutableStateFlow(FilterState())
 
     val uiState: StateFlow<CalendarUiState> =
-        combine(
-            repository.observeTasks(),
-            repository.observeDeleted(),
-            expandedYears,
-            expandedMonths,
-            editor
-        ) { tasks, deleted, years, months, editorState ->
-            val byYear = tasks.groupBy { it.year }
-            CalendarUiState(
-                currentYear = currentYear,
-                currentMonth = currentMonth,
-                years = (byYear.keys + currentYear).sortedDescending(),
-                tasksByYearMonth = byYear.mapValues { (_, yearTasks) -> yearTasks.groupBy { it.month } },
-                harvestByYear = byYear.mapValues { (_, yearTasks) ->
-                    yearTasks.flatMap { it.harvestItems }
-                        .groupBy { it.product to it.unit }
-                        .entries
-                        .fold(YearHarvestTotals()) { totals, (key, values) ->
-                            val amount = values.sumOf { it.amount }
-                            when (key.first) {
-                                com.vjuhbee.beecalc.model.HarvestProduct.HONEY -> if (key.second == com.vjuhbee.beecalc.model.HarvestUnit.LITER) totals.copy(honeyLiters = amount) else totals.copy(honeyKg = amount)
-                                com.vjuhbee.beecalc.model.HarvestProduct.POLLEN -> totals.copy(pollenKg = amount)
-                                com.vjuhbee.beecalc.model.HarvestProduct.BEE_BREAD -> totals.copy(beeBreadKg = amount)
-                                com.vjuhbee.beecalc.model.HarvestProduct.PROPOLIS -> totals.copy(propolisGrams = amount)
-                                com.vjuhbee.beecalc.model.HarvestProduct.WAX -> totals.copy(waxKg = amount)
-                                com.vjuhbee.beecalc.model.HarvestProduct.ROYAL_JELLY -> totals.copy(royalJellyGrams = amount)
-                                else -> totals
+        userApiaryRepository.observeActiveApiaryUuid().flatMapLatest { apiaryUuid ->
+            val tasksFlow = if (apiaryUuid.isNullOrBlank()) repository.observeTasks() else repository.observeTasksForApiary(apiaryUuid)
+            val deletedFlow = if (apiaryUuid.isNullOrBlank()) repository.observeDeleted() else repository.observeDeletedForApiary(apiaryUuid)
+            val hivesFlow = if (apiaryUuid.isNullOrBlank()) hiveRepository.observeHives() else hiveRepository.observeHivesForApiary(apiaryUuid)
+
+            combine(
+                tasksFlow,
+                deletedFlow,
+                expandedYears,
+                expandedMonths,
+                editor
+            ) { tasks, deleted, years, months, editorState ->
+                val byYear = tasks.groupBy { it.year }
+                CalendarUiState(
+                    currentYear = currentYear,
+                    currentMonth = currentMonth,
+                    years = (byYear.keys + currentYear).sortedDescending(),
+                    tasksByYearMonth = byYear.mapValues { (_, yearTasks) -> yearTasks.groupBy { it.month } },
+                    harvestByYear = byYear.mapValues { (_, yearTasks) ->
+                        yearTasks.flatMap { it.harvestItems }
+                            .groupBy { it.product to it.unit }
+                            .entries
+                            .fold(YearHarvestTotals()) { totals, (key, values) ->
+                                val amount = values.sumOf { it.amount }
+                                when (key.first) {
+                                    com.vjuhbee.beecalc.model.HarvestProduct.HONEY -> if (key.second == com.vjuhbee.beecalc.model.HarvestUnit.LITER) totals.copy(honeyLiters = amount) else totals.copy(honeyKg = amount)
+                                    com.vjuhbee.beecalc.model.HarvestProduct.POLLEN -> totals.copy(pollenKg = amount)
+                                    com.vjuhbee.beecalc.model.HarvestProduct.BEE_BREAD -> totals.copy(beeBreadKg = amount)
+                                    com.vjuhbee.beecalc.model.HarvestProduct.PROPOLIS -> totals.copy(propolisGrams = amount)
+                                    com.vjuhbee.beecalc.model.HarvestProduct.WAX -> totals.copy(waxKg = amount)
+                                    com.vjuhbee.beecalc.model.HarvestProduct.ROYAL_JELLY -> totals.copy(royalJellyGrams = amount)
+                                    else -> totals
+                                }
                             }
-                        }
-                },
-                expandedYears = years,
-                expandedMonths = months,
-                deletedTasks = deleted,
-                editor = editorState
-            )
-        }.combine(filters) { state, filter ->
-            val filteredByYear = state.tasksByYearMonth.mapValues { (_, months) ->
-                months.mapValues { (_, tasks) -> tasks.filter { task ->
-                    (filter.query.isBlank() || task.title.contains(filter.query, true) || task.shortDescription.contains(filter.query, true)) &&
-                        (filter.status == TaskStatusFilter.ALL || (filter.status == TaskStatusFilter.ACTIVE && !task.isDone) || (filter.status == TaskStatusFilter.DONE && task.isDone)) &&
-                        (filter.category == null || task.category == filter.category) &&
-                        (!filter.important || task.importance == com.vjuhbee.beecalc.model.Importance.HIGH)
-                } }
+                    },
+                    expandedYears = years,
+                    expandedMonths = months,
+                    deletedTasks = deleted,
+                    editor = editorState
+                )
+            }.combine(filters) { state, filter ->
+                val filteredByYear = state.tasksByYearMonth.mapValues { (_, months) ->
+                    months.mapValues { (_, tasks) -> tasks.filter { task ->
+                        (filter.query.isBlank() || task.title.contains(filter.query, true) || task.shortDescription.contains(filter.query, true)) &&
+                            (filter.status == TaskStatusFilter.ALL || (filter.status == TaskStatusFilter.ACTIVE && !task.isDone) || (filter.status == TaskStatusFilter.DONE && task.isDone)) &&
+                            (filter.category == null || task.category == filter.category) &&
+                            (!filter.important || task.importance == com.vjuhbee.beecalc.model.Importance.HIGH)
+                    } }
+                }
+                state.copy(tasksByYearMonth = filteredByYear, searchQuery = filter.query, statusFilter = filter.status, categoryFilter = filter.category, importantOnly = filter.important)
+            }.combine(hivesFlow) { state, hives ->
+                state.copy(hives = hives)
             }
-            state.copy(tasksByYearMonth = filteredByYear, searchQuery = filter.query, statusFilter = filter.status, categoryFilter = filter.category, importantOnly = filter.important)        }.combine(hiveRepository.observeHives()) { state, hives ->
-            state.copy(hives = hives)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -118,7 +131,10 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         )
 
     init {
-        viewModelScope.launch { repository.prepareYear(currentYear) }
+        viewModelScope.launch {
+            val currentApiary = userApiaryRepository.getActiveApiaryUuid() ?: ""
+            repository.prepareYear(currentYear, currentApiary)
+        }
     }
 
     fun setSearchQuery(value: String) { filters.update { it.copy(query = value) } }
@@ -154,17 +170,21 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun startAdd(year: Int, month: Int) {
-        editor.value = TaskEditor(
-            task = CalendarTask(
-                id = 0,
-                year = year,
-                month = month,
-                title = "",
-                shortDescription = "",
-                category = TaskCategory.OTHER
-            ),
-            isNew = true
-        )
+        viewModelScope.launch {
+            val currentApiary = userApiaryRepository.getActiveApiaryUuid() ?: ""
+            editor.value = TaskEditor(
+                task = CalendarTask(
+                    id = 0,
+                    year = year,
+                    month = month,
+                    apiaryUuid = currentApiary,
+                    title = "",
+                    shortDescription = "",
+                    category = TaskCategory.OTHER
+                ),
+                isNew = true
+            )
+        }
     }
 
     fun startEdit(task: CalendarTask) {
@@ -178,10 +198,15 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     fun saveTask(task: CalendarTask, isNew: Boolean) {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
-            val toSave = if (isNew && task.uuid.isBlank()) {
-                task.copy(uuid = java.util.UUID.randomUUID().toString(), updatedAt = now)
+            val currentApiary = if (task.apiaryUuid.isBlank()) {
+                userApiaryRepository.getActiveApiaryUuid() ?: ""
             } else {
-                task.copy(updatedAt = now)
+                task.apiaryUuid
+            }
+            val toSave = if (isNew && task.uuid.isBlank()) {
+                task.copy(uuid = java.util.UUID.randomUUID().toString(), apiaryUuid = currentApiary, updatedAt = now)
+            } else {
+                task.copy(apiaryUuid = currentApiary, updatedAt = now)
             }
             if (isNew) repository.addTask(toSave) else repository.updateTask(toSave)
             editor.value = null

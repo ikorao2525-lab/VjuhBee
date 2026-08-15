@@ -28,10 +28,10 @@ private const val PAGE_HEIGHT = 842f
 private const val MARGIN = 28f
 private const val CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2
 
-fun createReportPdf(context: Context, report: ReportData, kind: ReportKind, userName: String = "Пчеловод"): android.net.Uri {
+fun createReportPdf(context: Context, report: ReportData, kind: ReportKind, userName: String = "Пчеловод", apiaryName: String = "Вся пасека"): android.net.Uri {
     val document = PdfDocument()
     val layout = PdfLayout(document, context)
-    layout.header(report, kind, userName)
+    layout.header(report, kind, userName, apiaryName)
     layout.summary(report)
     reportMonths(report).forEach { month ->
         layout.monthSpacer()
@@ -75,7 +75,7 @@ private class PdfLayout(private val document: PdfDocument, private val context: 
     private fun newPage() { footer(); document.finishPage(page); page = startPage(); canvas = page.canvas; y = MARGIN }
     private fun ensure(height: Float) { if (y + height > PAGE_HEIGHT - 32f) newPage() }
 
-    fun header(report: ReportData, kind: ReportKind, userName: String) {
+    fun header(report: ReportData, kind: ReportKind, userName: String, apiaryName: String) {
         ensure(78f)
         drawLogo(canvas, context, MARGIN, y, 38)
         canvas.drawText("BeeCalc", MARGIN + 48f, y + 18f, title)
@@ -86,7 +86,7 @@ private class PdfLayout(private val document: PdfDocument, private val context: 
         userNamePaint.textAlign = Paint.Align.CENTER
         canvas.drawText(userName.ifBlank { "Пчеловод" }, PAGE_WIDTH / 2f, y + 25f, userNamePaint)
         userNamePaint.textAlign = Paint.Align.LEFT
-        rightText(if (kind == ReportKind.HIVE) "Улей: ${report.hive?.name.orEmpty()}" else "Вся пасека", PAGE_WIDTH - MARGIN, y + 15f, bold)
+        rightText(if (kind == ReportKind.HIVE) "Улей: ${report.hive?.name.orEmpty()}" else "Пасека: $apiaryName", PAGE_WIDTH - MARGIN, y + 15f, bold)
         rightText("Период: ${report.range.label}", PAGE_WIDTH - MARGIN, y + 31f, small)
         rightText("Сформирован: ${formatDate(System.currentTimeMillis())}", PAGE_WIDTH - MARGIN, y + 46f, small)
         y += 62f; canvas.drawLine(MARGIN, y, PAGE_WIDTH - MARGIN, y, line); y += 14f

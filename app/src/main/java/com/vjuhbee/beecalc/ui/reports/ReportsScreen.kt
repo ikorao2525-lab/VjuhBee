@@ -58,6 +58,10 @@ fun ReportsScreen(initialHiveUuid: String? = null, onBack: () -> Unit, viewModel
     var datePickerTarget by remember { mutableStateOf<DatePickerTarget?>(null) }
     var showReportPage by remember { mutableStateOf(false) }
 
+    val userAndApiaryRepository = (androidx.compose.ui.platform.LocalContext.current.applicationContext as com.vjuhbee.beecalc.BeeCalcApp).userAndApiaryRepository
+    val activeUserProfile by userAndApiaryRepository.observeActiveUserProfile().collectAsStateWithLifecycle(initialValue = null)
+    val activeApiary by userAndApiaryRepository.observeActiveApiary().collectAsStateWithLifecycle(initialValue = null)
+
     LaunchedEffect(initialHiveUuid) {
         if (initialHiveUuid != null) {
             reportKind = ReportKind.HIVE
@@ -66,7 +70,13 @@ fun ReportsScreen(initialHiveUuid: String? = null, onBack: () -> Unit, viewModel
     }
 
     if (showReportPage && state.report != null) {
-        ReportPage(report = state.report!!, kind = reportKind, onBack = { showReportPage = false })
+        ReportPage(
+            report = state.report!!,
+            kind = reportKind,
+            userName = activeUserProfile?.name ?: "Пчеловод",
+            apiaryName = activeApiary?.name ?: "Вся пасека",
+            onBack = { showReportPage = false }
+        )
         return
     }
 
@@ -155,6 +165,8 @@ fun ReportsScreen(initialHiveUuid: String? = null, onBack: () -> Unit, viewModel
 private fun ReportPage(
     report: ReportData,
     kind: ReportKind,
+    userName: String = "Пчеловод",
+    apiaryName: String = "Вся пасека",
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -186,7 +198,7 @@ private fun ReportPage(
                 Text(stringResource(R.string.reports_back_to_selection))
             }
             OutlinedButton(onClick = {
-                    val uri = createReportPdf(context, report, kind)
+                    val uri = createReportPdf(context, report, kind, userName, apiaryName)
                     context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                         type = "application/pdf"
                         putExtra(Intent.EXTRA_STREAM, uri)
@@ -196,15 +208,15 @@ private fun ReportPage(
                 Text(stringResource(R.string.reports_share_pdf))
             }
         }
-Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = {
-                pendingPdfUri = createReportPdf(context, report, kind)
+                pendingPdfUri = createReportPdf(context, report, kind, userName, apiaryName)
                 savePdfLauncher.launch("beecalc-report-${System.currentTimeMillis()}.pdf")
             }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
                 Text(stringResource(R.string.reports_save_pdf))
             }
             OutlinedButton(onClick = {
-                val uri = createReportPdf(context, report, kind)
+                val uri = createReportPdf(context, report, kind, userName, apiaryName)
                 context.startActivity(Intent.createChooser(Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(uri, "application/pdf")
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
