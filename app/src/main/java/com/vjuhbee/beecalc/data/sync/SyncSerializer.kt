@@ -5,22 +5,52 @@ import org.json.JSONObject
 
 /**
  * Сериализация/десериализация SyncFile в JSON (org.json, без доп. библиотек).
- * Схема: top-level объект с полями version/exportedAt и массивами сущностей.
+ * Схема v2: top-level объект с полями version/scope/exportedAt и массивами сущностей.
+ * Поддерживает чтение старых файлов v1 с прозрачной обратной совместимостью.
  */
 object SyncSerializer {
 
     fun encode(file: SyncFile): String {
         val root = JSONObject()
         root.put("version", file.version)
+        root.put("scope", file.scope.code)
         root.put("exportedAt", file.exportedAt)
         root.put("appVersion", file.appVersion)
         root.put("source", file.source)
+
+        root.put("users", JSONArray().apply {
+            file.users.forEach {
+                put(JSONObject().apply {
+                    put("uuid", it.uuid)
+                    put("name", it.name)
+                    put("type", it.type)
+                    put("createdAt", it.createdAt)
+                    put("updatedAt", it.updatedAt)
+                })
+            }
+        })
+
+        root.put("apiaries", JSONArray().apply {
+            file.apiaries.forEach {
+                put(JSONObject().apply {
+                    put("uuid", it.uuid)
+                    put("userUuid", it.userUuid)
+                    put("name", it.name)
+                    put("note", it.note)
+                    put("address", it.address)
+                    put("createdAt", it.createdAt)
+                    put("updatedAt", it.updatedAt)
+                })
+            }
+        })
+
         root.put("hives", JSONArray().apply {
             file.hives.forEach {
                 put(JSONObject().apply {
                     put("uuid", it.uuid)
                     put("name", it.name)
                     put("note", it.note)
+                    put("apiaryUuid", it.apiaryUuid)
                     put("updatedAt", it.updatedAt)
                 })
             }
@@ -58,6 +88,7 @@ object SyncSerializer {
                     put("uuid", it.uuid)
                     put("year", it.year)
                     put("month", it.month)
+                    put("apiaryUuid", it.apiaryUuid)
                     put("dueDateMillis", it.dueDateMillis ?: JSONObject.NULL)
                     put("title", it.title)
                     put("shortDescription", it.shortDescription)
@@ -86,10 +117,36 @@ object SyncSerializer {
     fun decode(json: String): SyncFile {
         val root = JSONObject(json)
         validateRoot(root)
+        val users = root.optJSONArray("users") ?: JSONArray()
+        val apiaries = root.optJSONArray("apiaries") ?: JSONArray()
         val hives = root.optJSONArray("hives") ?: JSONArray()
         val inspections = root.optJSONArray("inspections") ?: JSONArray()
         val treatments = root.optJSONArray("treatments") ?: JSONArray()
         val tasks = root.optJSONArray("tasks") ?: JSONArray()
+
+        val syncUsers = (0 until users.length()).map { i ->
+            val o = users.getJSONObject(i)
+            SyncUser(
+                uuid = o.getString("uuid"),
+                name = o.optString("name", ""),
+                type = o.optString("type", "individual"),
+                createdAt = o.optLong("createdAt", 0L),
+                updatedAt = o.optLong("updatedAt", 0L)
+            )
+        }
+
+        val syncApiaries = (0 until apiaries.length()).map { i ->
+            val o = apiaries.getJSONObject(i)
+            SyncApiary(
+                uuid = o.getString("uuid"),
+                userUuid = o.optString("userUuid", ""),
+                name = o.optString("name", ""),
+                note = o.optString("note", ""),
+                address = o.optString("address", ""),
+                createdAt = o.optLong("createdAt", 0L),
+                updatedAt = o.optLong("updatedAt", 0L)
+            )
+        }
 
         val syncHives = (0 until hives.length()).map { i ->
             val o = hives.getJSONObject(i)
@@ -97,6 +154,7 @@ object SyncSerializer {
                 uuid = o.getString("uuid"),
                 name = o.optString("name", ""),
                 note = o.optString("note", ""),
+                apiaryUuid = o.optString("apiaryUuid", ""),
                 updatedAt = o.optLong("updatedAt", 0L)
             )
         }
@@ -131,6 +189,7 @@ object SyncSerializer {
                 uuid = o.getString("uuid"),
                 year = o.optInt("year", 0),
                 month = o.optInt("month", 0),
+                apiaryUuid = o.optString("apiaryUuid", ""),
                 dueDateMillis = if (o.isNull("dueDateMillis")) null else o.optLong("dueDateMillis"),
                 title = o.optString("title", ""),
                 shortDescription = o.optString("shortDescription", ""),
@@ -153,11 +212,17 @@ object SyncSerializer {
             )
         }
 
+        val scopeCode = root.optString("scope", SyncScope.ALL.code)
+        val scope = if (scopeCode == SyncScope.ACTIVE_APIARY.code) SyncScope.ACTIVE_APIARY else SyncScope.ALL
+
         return SyncFile(
-            version = root.optInt("version", 1),
+            version = root.optInt("version", 2),
+            scope = scope,
             exportedAt = root.optLong("exportedAt", 0L),
             appVersion = root.optString("appVersion", "unknown"),
             source = root.optString("source", "BeeCalc"),
+            users = syncUsers,
+            apiaries = syncApiaries,
             hives = syncHives,
             inspections = syncInspections,
             treatments = syncTreatments,
@@ -165,9 +230,9 @@ object SyncSerializer {
         )
     }
 
-private fun validateRoot(root: JSONObject) {
+    private fun validateRoot(root: JSONObject) {
         val version = root.optInt("version", 1)
-        require(version == 1) { "Неподдерживаемая версия файла: $version" }
+        require(version in 1..2) { "Неподдерживаемая версия файла: $version" }
         listOf("hives", "inspections", "treatments", "tasks").forEach { key ->
             require(root.optJSONArray(key) != null) { "В файле отсутствует раздел: $key" }
         }
@@ -179,7 +244,23 @@ private fun validateRoot(root: JSONObject) {
                 require(item.optString("uuid").isNotBlank()) { "У записи $key нет uuid" }
             }
         }
+        validateTaskEnums(root)
+        if (root.has("users")) {
+            val users = root.optJSONArray("users") ?: JSONArray()
+            for (i in 0 until users.length()) {
+                val item = users.optJSONObject(i)
+                require(item != null && item.optString("uuid").isNotBlank()) { "Некорректная запись профиля пользователя" }
+            }
+        }
+        if (root.has("apiaries")) {
+            val apiaries = root.optJSONArray("apiaries") ?: JSONArray()
+            for (i in 0 until apiaries.length()) {
+                val item = apiaries.optJSONObject(i)
+                require(item != null && item.optString("uuid").isNotBlank()) { "Некорректная запись пасеки" }
+            }
+        }
     }
+
     private fun validateTaskEnums(root: JSONObject) {
         val categories = com.vjuhbee.beecalc.model.TaskCategory.entries.map { it.name }.toSet()
         val importance = com.vjuhbee.beecalc.model.Importance.entries.map { it.name }.toSet()
@@ -198,6 +279,7 @@ private fun validateRoot(root: JSONObject) {
             }
         }
     }
+
     private fun optNullableString(o: JSONObject, key: String): String? =
         if (o.isNull(key)) null else o.optString(key, "")
 

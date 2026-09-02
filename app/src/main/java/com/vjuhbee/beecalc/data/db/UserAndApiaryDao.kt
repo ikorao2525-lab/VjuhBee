@@ -26,6 +26,9 @@ interface UserDao {
 
     @Query("DELETE FROM users WHERE uuid = :uuid")
     suspend fun deleteByUuid(uuid: String)
+
+    @Query("DELETE FROM users")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -53,4 +56,7 @@ interface ApiaryDao {
 
     @Query("DELETE FROM apiaries WHERE uuid = :uuid")
     suspend fun deleteByUuid(uuid: String)
+
+    @Query("DELETE FROM apiaries")
+    suspend fun deleteAll()
 }

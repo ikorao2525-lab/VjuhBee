@@ -49,6 +49,10 @@ fun createReportPdf(context: Context, report: ReportData, kind: ReportKind, user
     layout.qrFooter(report, kind)
     layout.finish()
     val dir = File(context.cacheDir, "reports").apply { mkdirs() }
+    dir.listFiles { candidate -> candidate.isFile && candidate.extension == "pdf" }
+        ?.sortedByDescending { it.lastModified() }
+        ?.drop(9)
+        ?.forEach { it.delete() }
     val file = File(dir, "beecalc-report-${System.currentTimeMillis()}.pdf")
     FileOutputStream(file).use { document.writeTo(it) }
     document.close()

@@ -1,5 +1,7 @@
 package com.vjuhbee.beecalc.data
 
+import androidx.room.withTransaction
+import com.vjuhbee.beecalc.data.db.BeeCalcDatabase
 import com.vjuhbee.beecalc.data.db.CalendarTaskDao
 import com.vjuhbee.beecalc.data.db.HarvestItemDao
 import com.vjuhbee.beecalc.data.db.toEntity
@@ -24,6 +26,7 @@ interface CalendarRepository {
 }
 
 class RoomCalendarRepository(
+    private val database: BeeCalcDatabase,
     private val dao: CalendarTaskDao,
     private val harvestDao: HarvestItemDao
 ) : CalendarRepository {
@@ -49,12 +52,12 @@ class RoomCalendarRepository(
         harvestDao.insertAll(task.harvestItems.map { it.toEntity(task.uuid) })
     }
 
-    override suspend fun addTask(task: CalendarTask) {
+    override suspend fun addTask(task: CalendarTask) = database.withTransaction {
         dao.insert(task.toEntity())
         saveHarvest(task)
     }
 
-    override suspend fun updateTask(task: CalendarTask) {
+    override suspend fun updateTask(task: CalendarTask) = database.withTransaction {
         dao.update(task.toEntity())
         saveHarvest(task)
     }
@@ -73,9 +76,9 @@ class RoomCalendarRepository(
         dao.update(task.copy(isDeleted = false).toEntity())
     }
 
-    override suspend fun deleteForever(task: CalendarTask) {
-        dao.delete(task.toEntity())
+    override suspend fun deleteForever(task: CalendarTask) = database.withTransaction {
         harvestDao.deleteForTask(task.uuid)
+        dao.delete(task.toEntity())
     }
 
     override suspend fun prepareYear(year: Int, apiaryUuid: String) {

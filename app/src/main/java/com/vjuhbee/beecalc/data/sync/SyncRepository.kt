@@ -1,49 +1,80 @@
 package com.vjuhbee.beecalc.data.sync
 
 import com.vjuhbee.beecalc.BuildConfig
-
 import androidx.room.withTransaction
 import com.vjuhbee.beecalc.data.CalendarRepository
 import com.vjuhbee.beecalc.data.HiveRepository
+import com.vjuhbee.beecalc.data.UserAndApiaryRepository
 import com.vjuhbee.beecalc.data.db.BeeCalcDatabase
+import com.vjuhbee.beecalc.model.Apiary
 import com.vjuhbee.beecalc.model.CalendarTask
 import com.vjuhbee.beecalc.model.Hive
 import com.vjuhbee.beecalc.model.Inspection
+import com.vjuhbee.beecalc.model.ProfileType
 import com.vjuhbee.beecalc.model.Treatment
-import org.json.JSONArray
-import org.json.JSONObject
+import com.vjuhbee.beecalc.model.UserProfile
 
 /**
- * Экспорт и импорт (слияние) всей пасеки (SPEC.md §9, v0.4).
+ * Экспорт и импорт (слияние) данных пасеки (SPEC.md §9, v0.4, v0.9.0).
  *
- * Экспорт сериализует все сущности в JSON (org.json, без доп. библиотек).
- * Импорт разбирает файл и строит [ImportPlan] — сводку новых/изменённых
- * конфликтов, а затем применяет слияние по стабильному uuid.
- *
- * Идентификация — по uuid; локальные int-id и внутренние связи hiveId
- * восстанавливаются по uuid во время импорта (на разных телефонах id разные).
+ * Поддерживает:
+ * - Экспорт всей базы (все пользователи, пасеки, ульи, задачи)
+ * - Экспорт только активной пасеки
+ * - Импорт и объединение данных по UUID с разрешением конфликтов
+ * - Точное восстановление (Full Restore) из резервной копии
  */
 class SyncRepository(
     private val hiveRepository: HiveRepository,
     private val calendarRepository: CalendarRepository,
+    private val userAndApiaryRepository: UserAndApiaryRepository? = null,
     private val database: BeeCalcDatabase? = null
 ) {
 
     // ---------- Экспорт ----------
 
-    suspend fun export(): SyncFile {
-        val hives = hiveRepository.allHives()
-        val inspections = hiveRepository.allInspections()
-        val treatments = hiveRepository.allTreatments()
-        val tasks = calendarRepository.allTasks()
+    suspend fun export(scope: SyncScope = SyncScope.ALL): SyncFile {
+        val activeApiaryUuid = userAndApiaryRepository?.getActiveApiaryUuid() ?: ""
 
+        val users = if (scope == SyncScope.ALL) {
+            userAndApiaryRepository?.allUsers() ?: emptyList()
+        } else {
+            val activeProfile = userAndApiaryRepository?.allUsers()?.firstOrNull { it.uuid == userAndApiaryRepository.getActiveUserUuid() }
+            if (activeProfile != null) listOf(activeProfile) else emptyList()
+        }
+
+        val apiaries = if (scope == SyncScope.ALL) {
+            userAndApiaryRepository?.allApiaries() ?: emptyList()
+        } else {
+            val activeApiary = userAndApiaryRepository?.allApiaries()?.firstOrNull { it.uuid == activeApiaryUuid }
+            if (activeApiary != null) listOf(activeApiary) else emptyList()
+        }
+
+        val hives = if (scope == SyncScope.ALL || activeApiaryUuid.isBlank()) {
+            hiveRepository.allHives()
+        } else {
+            hiveRepository.hivesForApiary(activeApiaryUuid)
+        }
+
+        val hiveIds = hives.map { it.id }.toSet()
         val hiveUuidById = hives.associate { it.id to it.uuid }
 
+        val inspections = hiveRepository.allInspections().filter { it.hiveId in hiveIds }
+        val treatments = hiveRepository.allTreatments().filter { it.hiveId in hiveIds }
+
+        val tasks = if (scope == SyncScope.ALL || activeApiaryUuid.isBlank()) {
+            calendarRepository.allTasks()
+        } else {
+            calendarRepository.allTasksForApiary(activeApiaryUuid)
+        }
+
         return SyncFile(
-            version = 1,
+            version = 2,
+            scope = scope,
             exportedAt = System.currentTimeMillis(),
             appVersion = BuildConfig.VERSION_NAME,
             source = "BeeCalc",
+            users = users.map { it.toSync() },
+            apiaries = apiaries.map { it.toSync() },
             hives = hives.map { it.toSync() },
             inspections = inspections.map {
                 it.toSync().copy(hiveUuid = hiveUuidById[it.hiveId] ?: "")
@@ -57,11 +88,6 @@ class SyncRepository(
 
     // ---------- Импорт (план + применение) ----------
 
-    /**
-     * Строит план слияния [file] с текущей базой.
-     * Конфликтуют сущности одного uuid, изменённые на обоих телефонах
-     * (сравнение по updatedAt требует выбора пользователем — "ask_each").
-     */
     suspend fun buildPlan(file: SyncFile): ImportPlan {
         val localHives = hiveRepository.allHives()
         val localInspections = hiveRepository.allInspections()
@@ -77,11 +103,10 @@ class SyncRepository(
             newHives = file.hives.filter { it.uuid !in localHivesByUuid },
             hiveConflicts = file.hives.mapNotNull { remote ->
                 val local = localHivesByUuid[remote.uuid] ?: return@mapNotNull null
-                // Улей есть на обоих телефонах и отличается — пользователь решает.
                 if (!local.equalsFields(remote)) {
                     HiveConflict(
                         local = local,
-                        remote = SyncHive(remote.uuid, remote.name, remote.note, remote.updatedAt)
+                        remote = SyncHive(remote.uuid, remote.name, remote.note, remote.apiaryUuid, remote.updatedAt)
                     )
                 } else null
             },
@@ -98,45 +123,93 @@ class SyncRepository(
             newTasks = file.tasks.filter { it.uuid !in localTasksByUuid },
             updatedTasks = file.tasks.filter { remote ->
                 val local = localTasksByUuid[remote.uuid] ?: return@filter false
-                // Активная задача из файла восстанавливает локальную задачу из корзины.
-                // Вместе с ней возвращаются linkedHiveUuids и остальные данные.
                 (local.isDeleted && !remote.isDeleted) || local.updatedAt < remote.updatedAt
             }
         )
     }
 
-    /**
-     * Применяет слияние. [resolveConflicts] вызывается для каждого конфликта
-     * улья и должен вернуть версию, которую оставить: null = пропустить улей,
-     * false = локальную (текущую), true = удалённую (из файла).
-     */
     suspend fun apply(file: SyncFile, plan: ImportPlan, resolveConflict: (HiveConflict) -> Boolean?) {
         val execute: suspend () -> Unit = { applyUnsafe(file, plan, resolveConflict) }
         database?.withTransaction { execute() } ?: execute()
     }
-    private suspend fun applyUnsafe(file: SyncFile, plan: ImportPlan, resolveConflict: (HiveConflict) -> Boolean?) {
-        for (remote in plan.newHives) {
-            hiveRepository.addHive(
-                Hive(id = 0, name = remote.name, note = remote.note, uuid = remote.uuid, updatedAt = remote.updatedAt)
-            )
-        }
 
-        // Конфликтующие ульи — по выбору пользователя.
-        for (conflict in plan.hiveConflicts) {
-            val choice = resolveConflict(conflict) ?: continue
-            if (choice) {
-                updateHiveByUuid(conflict.remote.uuid) {
-                    Hive(id = it.id, name = conflict.remote.name, note = conflict.remote.note,
-                        uuid = conflict.remote.uuid, updatedAt = conflict.remote.updatedAt)
+    private suspend fun applyUnsafe(file: SyncFile, plan: ImportPlan, resolveConflict: (HiveConflict) -> Boolean?) {
+        val targetApiaryUuid = userAndApiaryRepository?.getActiveApiaryUuid() ?: ""
+
+        // 1) Импорт пользователей и пасек (если есть в файле)
+        if (file.users.isNotEmpty() && userAndApiaryRepository != null) {
+            val localUsers = userAndApiaryRepository.allUsers().associateBy { it.uuid }
+            for (u in file.users) {
+                if (u.uuid !in localUsers) {
+                    val profileType = if (u.type == ProfileType.COMPANY.code) ProfileType.COMPANY else ProfileType.INDIVIDUAL
+                    userAndApiaryRepository.insertUserDirect(
+                        UserProfile(
+                            uuid = u.uuid,
+                            name = u.name,
+                            type = profileType,
+                            createdAt = u.createdAt,
+                            updatedAt = u.updatedAt
+                        )
+                    )
                 }
             }
         }
 
-        // 2) Связь uuid улья -> локальный id для вставки осмотров/обработок.
+        if (file.apiaries.isNotEmpty() && userAndApiaryRepository != null) {
+            val localApiaries = userAndApiaryRepository.allApiaries().associateBy { it.uuid }
+            for (a in file.apiaries) {
+                if (a.uuid !in localApiaries) {
+                    userAndApiaryRepository.insertApiaryDirect(
+                        Apiary(
+                            uuid = a.uuid,
+                            userUuid = a.userUuid,
+                            name = a.name,
+                            note = a.note,
+                            address = a.address,
+                            createdAt = a.createdAt,
+                            updatedAt = a.updatedAt
+                        )
+                    )
+                }
+            }
+        }
+
+        // 2) Ульи
+        for (remote in plan.newHives) {
+            val hiveApiary = remote.apiaryUuid.ifBlank { targetApiaryUuid }
+            hiveRepository.addHive(
+                Hive(
+                    id = 0,
+                    name = remote.name,
+                    note = remote.note,
+                    apiaryUuid = hiveApiary,
+                    uuid = remote.uuid,
+                    updatedAt = remote.updatedAt
+                )
+            )
+        }
+
+        for (conflict in plan.hiveConflicts) {
+            val choice = resolveConflict(conflict) ?: continue
+            if (choice) {
+                updateHiveByUuid(conflict.remote.uuid) {
+                    val hiveApiary = conflict.remote.apiaryUuid.ifBlank { it.apiaryUuid }.ifBlank { targetApiaryUuid }
+                    Hive(
+                        id = it.id,
+                        name = conflict.remote.name,
+                        note = conflict.remote.note,
+                        apiaryUuid = hiveApiary,
+                        uuid = conflict.remote.uuid,
+                        updatedAt = conflict.remote.updatedAt
+                    )
+                }
+            }
+        }
+
+        // 3) Осмотры и обработки
         val allHivesAfter = hiveRepository.allHives()
         val uuidToId = allHivesAfter.associate { it.uuid to it.id }
 
-        // Осмотры: новые + обновлённые (по новому времени).
         val localInsp = hiveRepository.allInspections().associateBy { it.uuid }
         for (remote in plan.newInspections) {
             val hiveId = uuidToId[remote.hiveUuid] ?: continue
@@ -152,13 +225,14 @@ class SyncRepository(
             val local = localInsp[remote.uuid] ?: continue
             val hiveId = uuidToId[remote.hiveUuid] ?: local.hiveId
             hiveRepository.updateInspection(
-                local.copy(hiveId = hiveId, date = remote.date, frames = remote.frames,
+                local.copy(
+                    hiveId = hiveId, date = remote.date, frames = remote.frames,
                     brood = remote.brood, queenSeen = remote.queenSeen, note = remote.note,
-                    updatedAt = remote.updatedAt)
+                    updatedAt = remote.updatedAt
+                )
             )
         }
 
-        // Обработки.
         val localTreat = hiveRepository.allTreatments().associateBy { it.uuid }
         for (remote in plan.newTreatments) {
             val hiveId = uuidToId[remote.hiveUuid] ?: continue
@@ -173,25 +247,37 @@ class SyncRepository(
             val local = localTreat[remote.uuid] ?: continue
             val hiveId = uuidToId[remote.hiveUuid] ?: local.hiveId
             hiveRepository.updateTreatment(
-                local.copy(hiveId = hiveId, date = remote.date, medicine = remote.medicine,
-                    dose = remote.dose, note = remote.note, updatedAt = remote.updatedAt)
+                local.copy(
+                    hiveId = hiveId, date = remote.date, medicine = remote.medicine,
+                    dose = remote.dose, note = remote.note, updatedAt = remote.updatedAt
+                )
             )
         }
 
-        // 3) Календарь: новые + обновлённые.
+        // 4) Календарь
         val localTasks = calendarRepository.allTasks().associateBy { it.uuid }
         for (remote in plan.newTasks) {
-            calendarRepository.addTask(remote.toModel())
+            val taskApiary = remote.apiaryUuid.ifBlank { targetApiaryUuid }
+            calendarRepository.addTask(remote.toModel().copy(apiaryUuid = taskApiary))
         }
         for (remote in plan.updatedTasks) {
             val local = localTasks[remote.uuid] ?: continue
-            calendarRepository.updateTask(local.copyFromSync(remote))
+            val taskApiary = remote.apiaryUuid.ifBlank { local.apiaryUuid }.ifBlank { targetApiaryUuid }
+            calendarRepository.updateTask(local.copyFromSync(remote).copy(apiaryUuid = taskApiary))
         }
     }
 
-    /** Replaces all data from a verified backup in one transaction. */
+    /** Полное точное восстановление базы из бэкапа в одной транзакции. */
     suspend fun restoreExactly(file: SyncFile) = requireNotNull(database) { "Восстановление требует Room базы" }.withTransaction {
-        requireNotNull(database).clearAllTables()
+        val db = requireNotNull(database)
+        db.harvestItemDao().deleteAll()
+        db.calendarTaskDao().deleteAll()
+        db.hiveDao().deleteAllInspections()
+        db.hiveDao().deleteAllTreatments()
+        db.hiveDao().deleteAllHives()
+        db.apiaryDao().deleteAll()
+        db.userDao().deleteAll()
+
         val plan = ImportPlan(
             newHives = file.hives, hiveConflicts = emptyList(),
             newInspections = file.inspections, updatedInspections = emptyList(),
@@ -199,9 +285,21 @@ class SyncRepository(
             newTasks = file.tasks, updatedTasks = emptyList()
         )
         applyUnsafe(file, plan) { false }
-    }
 
-    // ---------- helpers ----------
+        // Если файл восстановил пользователей и пасеки, выставляем активные
+        userAndApiaryRepository?.let { repo ->
+            val firstUser = repo.allUsers().firstOrNull()
+            if (firstUser != null) {
+                repo.setActiveUser(firstUser.uuid)
+                val firstApiary = repo.allApiaries().firstOrNull { it.userUuid == firstUser.uuid }
+                if (firstApiary != null) {
+                    repo.setActiveApiary(firstApiary.uuid)
+                }
+            } else {
+                repo.ensureDefaultUserAndApiary()
+            }
+        }
+    }
 
     private suspend fun updateHiveByUuid(uuid: String, mutate: (Hive) -> Hive) {
         val hive = hiveRepository.findHiveByUuid(uuid) ?: return
@@ -225,7 +323,7 @@ data class ImportPlan(
     val totalConflicts: Int get() = hiveConflicts.size
 }
 
-/** Конфликт по улью: локальная и удалённая версии (пользователь выбирает). */
+/** Конфликт по улью: локальная и удалённая версии. */
 data class HiveConflict(
     val local: Hive,
     val remote: SyncHive
@@ -245,7 +343,7 @@ private fun legacyHarvestItems(honeyKg: Double?, honeyLiters: Double?, pollenKg:
 }
 
 private fun SyncTask.toModel() = CalendarTask(
-    id = 0, year = year, month = month, dueDateMillis = dueDateMillis, title = title,
+    id = 0, year = year, month = month, apiaryUuid = apiaryUuid, dueDateMillis = dueDateMillis, title = title,
     shortDescription = shortDescription, fullDescription = fullDescription,
     category = com.vjuhbee.beecalc.model.TaskCategory.valueOf(category),
     importance = com.vjuhbee.beecalc.model.Importance.valueOf(importance),
@@ -260,7 +358,7 @@ private fun SyncTask.toModel() = CalendarTask(
 )
 
 private fun CalendarTask.copyFromSync(s: SyncTask) = copy(
-    year = s.year, month = s.month, dueDateMillis = s.dueDateMillis, title = s.title,
+    year = s.year, month = s.month, apiaryUuid = s.apiaryUuid.ifBlank { apiaryUuid }, dueDateMillis = s.dueDateMillis, title = s.title,
     shortDescription = s.shortDescription, fullDescription = s.fullDescription,
     category = com.vjuhbee.beecalc.model.TaskCategory.valueOf(s.category),
     importance = com.vjuhbee.beecalc.model.Importance.valueOf(s.importance),

@@ -70,4 +70,66 @@ class SyncModelsTest {
 
         assertEquals(source.dueDateMillis, source.toSync().dueDateMillis)
     }
+
+    @Test
+    fun serializerEncodesAndDecodesUsersAndApiaries() {
+        val user = SyncUser(uuid = "user-1", name = "Иван", type = "individual", createdAt = 100L, updatedAt = 100L)
+        val apiary = SyncApiary(uuid = "ap-1", userUuid = "user-1", name = "Лесная", note = "Точок у леса", address = "д. Сосновка", createdAt = 100L, updatedAt = 100L)
+        val hive = SyncHive(uuid = "h-1", name = "Улей №1", note = "Сильный", apiaryUuid = "ap-1", updatedAt = 100L)
+        val task = SyncTask(
+            uuid = "t-1", year = 2026, month = 8, apiaryUuid = "ap-1", title = "Осмотр",
+            shortDescription = "Проверка", fullDescription = null, category = "INSPECTION",
+            importance = "NORMAL", tags = "", isDone = false, isDeleted = false,
+            honeyKg = null, honeyLiters = null, pollenKg = null, beeBreadKg = null,
+            propolisGrams = null, waxKg = null, royalJellyGrams = null,
+            harvestItems = "", linkedHiveUuids = "h-1", updatedAt = 100L
+        )
+
+        val file = SyncFile(
+            version = 2,
+            scope = SyncScope.ACTIVE_APIARY,
+            exportedAt = 200L,
+            appVersion = "0.9.0",
+            source = "BeeCalc",
+            users = listOf(user),
+            apiaries = listOf(apiary),
+            hives = listOf(hive),
+            inspections = emptyList(),
+            treatments = emptyList(),
+            tasks = listOf(task)
+        )
+
+        val json = SyncSerializer.encode(file)
+        val decoded = SyncSerializer.decode(json)
+
+        assertEquals(2, decoded.version)
+        assertEquals(SyncScope.ACTIVE_APIARY, decoded.scope)
+        assertEquals(1, decoded.users.size)
+        assertEquals("Иван", decoded.users.first().name)
+        assertEquals(1, decoded.apiaries.size)
+        assertEquals("Лесная", decoded.apiaries.first().name)
+        assertEquals("ap-1", decoded.hives.first().apiaryUuid)
+        assertEquals("ap-1", decoded.tasks.first().apiaryUuid)
+    }
+
+    @Test
+    fun decodeRejectsUnknownTaskEnumBeforeImport() {
+        val json = """{
+            "version": 1, "exportedAt": 0, "appVersion": "test", "source": "test",
+            "hives": [], "inspections": [], "treatments": [],
+            "tasks": [{
+                "uuid": "task-1", "year": 2026, "month": 1, "title": "Task",
+                "shortDescription": "", "category": "UNKNOWN", "importance": "LOW",
+                "tags": "", "isDone": false, "isDeleted": false, "harvestItems": "",
+                "linkedHiveUuids": "", "updatedAt": 1
+            }]
+        }""".trimIndent()
+
+        try {
+            SyncSerializer.decode(json)
+            org.junit.Assert.fail("Unknown enum must be rejected while decoding")
+        } catch (error: RuntimeException) {
+            assertTrue(error.message.orEmpty().isNotBlank() || error.cause?.message.orEmpty().isNotBlank())
+        }
+    }
 }

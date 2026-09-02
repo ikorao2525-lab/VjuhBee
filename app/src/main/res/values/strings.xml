@@ -268,7 +268,10 @@
     <string name="sync_back">← Назад</string>
     <string name="sync_description">Перенос пасеки между телефонами без интернета. Экспортируйте данные в файл, отправьте его на другой телефон и импортируйте там.</string>
     <string name="sync_export_title">Экспорт пасеки</string>
-    <string name="sync_export_desc">Сохраняет в файл все ульи, осмотры, обработки и календарь.</string>
+    <string name="sync_export_desc">Сохраняет в файл данные пасеки, ульи, осмотры, обработки и календарь.</string>
+    <string name="sync_export_scope_title">Что экспортировать:</string>
+    <string name="sync_export_scope_active">Только активную пасеку («%1$s»)</string>
+    <string name="sync_export_scope_all">Всю базу (все профили и пасеки)</string>
     <string name="sync_export_button">Экспортировать и отправить</string>
     <string name="sync_save_button">Сохранить на устройство</string>
     <string name="sync_working">Работаю…</string>
@@ -289,6 +292,9 @@
     <string name="sync_backups_empty">Резервных копий пока нет.</string>
     <string name="sync_backup_save">Сохранить</string>
     <string name="sync_backup_restore">Восстановить</string>
+    <string name="sync_restore_confirm_title">Восстановить копию?</string>
+    <string name="sync_restore_confirm_text">Текущие данные пасеки будут полностью заменены данными из этой резервной копии. Это действие нельзя отменить.</string>
+    <string name="sync_restore_confirm_action">Восстановить копию</string>
     <string name="sync_backup_delete">Удалить</string>
     <string name="sync_warning_lost">Внимание: некоторые данные из файла или с этого телефона могут не попасть в итог, если появятся противоречия. Проверяйте внимательно.</string>
     <string name="sync_cancel">Отмена</string>

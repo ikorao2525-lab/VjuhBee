@@ -25,7 +25,6 @@ class BeeCalcApp : Application() {
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             runCatching {
                 diagnosticLogger.error("Uncaught exception on ${thread.name}", throwable)
-                diagnosticLogger.markStartupStarted()
             }
             previousHandler?.uncaughtException(thread, throwable)
         }
@@ -36,8 +35,8 @@ class BeeCalcApp : Application() {
         RoomUserAndApiaryRepository(this, database.userDao(), database.apiaryDao())
     }
     val calendarRepository: CalendarRepository by lazy {
-        RoomCalendarRepository(database.calendarTaskDao(), database.harvestItemDao())
+        RoomCalendarRepository(database, database.calendarTaskDao(), database.harvestItemDao())
     }
     val hiveRepository: HiveRepository by lazy { RoomHiveRepository(database.hiveDao()) }
-    val syncRepository: SyncRepository by lazy { SyncRepository(hiveRepository, calendarRepository, database) }
+    val syncRepository: SyncRepository by lazy { SyncRepository(hiveRepository, calendarRepository, userAndApiaryRepository, database) }
 }

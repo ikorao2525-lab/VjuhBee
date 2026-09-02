@@ -36,7 +36,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material3.RadioButton
 import com.vjuhbee.beecalc.R
+import com.vjuhbee.beecalc.data.sync.SyncScope
 import com.vjuhbee.beecalc.data.sync.HiveConflict
 import java.text.SimpleDateFormat
 import java.text.DecimalFormat
@@ -90,8 +92,14 @@ fun SyncScreen(
                         Intent.createChooser(intent, shareTitle)
                     )
                 }
-                is SyncMessage.Error -> {
-                    snackbarHostState.showSnackbar(msg.text)
+                is SyncMessage.Error, is SyncMessage.Success -> {
+                    snackbarHostState.showSnackbar(
+                        when (msg) {
+                            is SyncMessage.Error -> msg.text
+                            is SyncMessage.Success -> msg.text
+                            else -> error("Unsupported sync message")
+                        }
+                    )
                 }
             }
             viewModel.consumeMessage()
@@ -188,7 +196,7 @@ Card(modifier = Modifier.fillMaxWidth()) {
                                     Text(formatBackup(context, backup), modifier = Modifier.fillMaxWidth(), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                     Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                                         OutlinedButton(onClick = { viewModel.selectBackup(backup); backupSaveLauncher.launch("beecalc-backup.json") }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sync_backup_save)) }
-                                        OutlinedButton(onClick = { viewModel.restoreBackup(backup) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sync_backup_restore)) }
+                                        OutlinedButton(onClick = { viewModel.requestRestore(backup) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sync_backup_restore)) }
                                         OutlinedButton(onClick = { viewModel.deleteBackup(backup) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sync_backup_delete)) }
                                     }
                                 }
@@ -208,6 +216,44 @@ Card(modifier = Modifier.fillMaxWidth()) {
                             text = stringResource(R.string.sync_export_desc),
                             style = MaterialTheme.typography.bodyMedium
                         )
+
+                        Text(
+                            text = stringResource(R.string.sync_export_scope_title),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            RadioButton(
+                                selected = state.exportScope == SyncScope.ACTIVE_APIARY,
+                                onClick = { viewModel.setExportScope(SyncScope.ACTIVE_APIARY) }
+                            )
+                            Text(
+                                text = stringResource(R.string.sync_export_scope_active, state.activeApiaryName.ifBlank { "Основная" }),
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            RadioButton(
+                                selected = state.exportScope == SyncScope.ALL,
+                                onClick = { viewModel.setExportScope(SyncScope.ALL) }
+                            )
+                            Text(
+                                text = stringResource(R.string.sync_export_scope_all),
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        }
+
                         Button(
                             onClick = { viewModel.export() },
                             enabled = !state.exporting && !state.importing,
@@ -220,7 +266,8 @@ Card(modifier = Modifier.fillMaxWidth()) {
                         }
                         OutlinedButton(
                             onClick = {
-                                saveLauncher.launch("apiary-backup.json")
+                                val fileName = if (state.exportScope == SyncScope.ALL) "beecalc-full-backup.json" else "beecalc-${state.activeApiaryName.ifBlank { "apiary" }}.json"
+                                saveLauncher.launch(fileName)
                             },
                             enabled = !state.exporting && !state.importing,
                             modifier = Modifier.fillMaxWidth()
@@ -263,6 +310,23 @@ Card(modifier = Modifier.fillMaxWidth()) {
 
             Spacer(modifier = Modifier.height(8.dp))
         }
+    }
+    viewModel.pendingRestore?.let {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissRestore,
+            title = { Text(stringResource(R.string.sync_restore_confirm_title)) },
+            text = { Text(stringResource(R.string.sync_restore_confirm_text)) },
+            confirmButton = {
+                Button(onClick = viewModel::confirmRestore) {
+                    Text(stringResource(R.string.sync_restore_confirm_action))
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = viewModel::dismissRestore) {
+                    Text(stringResource(R.string.sync_cancel))
+                }
+            }
+        )
     }
 }
 
@@ -385,6 +449,11 @@ private fun DoneContent(count: Int, canUndo: Boolean, onUndo: () -> Unit, onBack
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+            if (canUndo) {
+                OutlinedButton(onClick = onUndo, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.sync_undo_import))
+                }
+            }
             Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.sync_done_ok))
             }

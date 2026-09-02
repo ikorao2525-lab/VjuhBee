@@ -37,6 +37,15 @@ interface HiveDao {
     @Query("SELECT t.* FROM treatments t INNER JOIN hives h ON t.hiveId = h.id WHERE h.apiaryUuid = :apiaryUuid")
     suspend fun treatmentsByApiary(apiaryUuid: String): List<TreatmentEntity>
 
+    @Query("DELETE FROM inspections")
+    suspend fun deleteAllInspections()
+
+    @Query("DELETE FROM treatments")
+    suspend fun deleteAllTreatments()
+
+    @Query("DELETE FROM hives")
+    suspend fun deleteAllHives()
+
     @Query("SELECT * FROM hives WHERE uuid = :uuid LIMIT 1")
     suspend fun findHiveByUuid(uuid: String): HiveEntity?
 

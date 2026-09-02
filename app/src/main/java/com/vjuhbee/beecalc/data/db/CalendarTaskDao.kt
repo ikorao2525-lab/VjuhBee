@@ -57,6 +57,9 @@ interface CalendarTaskDao {
     @Query("SELECT * FROM calendar_tasks")
     suspend fun allTasksWithHarvest(): List<CalendarTaskEntity>
 
+    @Query("DELETE FROM calendar_tasks")
+    suspend fun deleteAll()
+
     @Insert
     suspend fun insert(task: CalendarTaskEntity)
 

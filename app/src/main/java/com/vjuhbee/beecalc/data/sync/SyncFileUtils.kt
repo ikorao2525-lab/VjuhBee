@@ -12,10 +12,12 @@ object SyncFileUtils {
     private const val DIR = "sync"
     private const val EXT = "json"
     private const val FILE_PREFIX = "beecalc-apiary-"
+    private const val MAX_CACHE_FILES = 10
 
     /** Пишет экспорт во внутренний кэш и возвращает URI для шаринга. */
     fun writeExport(context: Context, json: String): Uri {
         val dir = File(context.cacheDir, DIR).apply { mkdirs() }
+        pruneCache(dir)
         val fileName = "$FILE_PREFIX${System.currentTimeMillis()}.$EXT"
         val file = File(dir, fileName)
         FileOutputStream(file).use { out ->
@@ -23,6 +25,13 @@ object SyncFileUtils {
         }
         val authority = context.packageName + ".fileprovider"
         return FileProvider.getUriForFile(context, authority, file)
+    }
+
+    private fun pruneCache(dir: File) {
+        dir.listFiles { file -> file.isFile && file.extension == EXT }
+            ?.sortedByDescending { it.lastModified() }
+            ?.drop(MAX_CACHE_FILES - 1)
+            ?.forEach { it.delete() }
     }
 
 

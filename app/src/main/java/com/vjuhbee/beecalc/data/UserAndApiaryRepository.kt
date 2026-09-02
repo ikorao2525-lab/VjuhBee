@@ -46,6 +46,11 @@ interface UserAndApiaryRepository {
     suspend fun updateApiary(apiary: Apiary)
     suspend fun deleteApiary(apiaryUuid: String)
 
+    suspend fun allUsers(): List<UserProfile>
+    suspend fun allApiaries(): List<Apiary>
+    suspend fun insertUserDirect(user: UserProfile)
+    suspend fun insertApiaryDirect(apiary: Apiary)
+
     /** Инициализация: если в БД нет ни одного пользователя, создаём дефолтного и дефолтную пасеку. */
     suspend fun ensureDefaultUserAndApiary(): Pair<UserProfile, Apiary>
 }
@@ -164,6 +169,20 @@ class RoomUserAndApiaryRepository(
                 setActiveApiary(remaining.first().uuid)
             }
         }
+    }
+
+    override suspend fun allUsers(): List<UserProfile> =
+        userDao.getAll().map { it.toModel() }
+
+    override suspend fun allApiaries(): List<Apiary> =
+        apiaryDao.getAll().map { it.toModel() }
+
+    override suspend fun insertUserDirect(user: UserProfile) {
+        userDao.insert(user.toEntity())
+    }
+
+    override suspend fun insertApiaryDirect(apiary: Apiary) {
+        apiaryDao.insert(apiary.toEntity())
     }
 
     override suspend fun ensureDefaultUserAndApiary(): Pair<UserProfile, Apiary> {

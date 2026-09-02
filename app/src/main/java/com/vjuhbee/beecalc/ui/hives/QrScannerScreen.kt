@@ -133,6 +133,7 @@ fun QrScannerScreen(
                         }
                         val analysis = ImageAnalysis.Builder()
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                            .setOutputImageRotationEnabled(true)
                             .build()
                         analysis.setAnalyzer(executor, QrAnalyzer { raw ->
                             if (scanningEnabled) {
@@ -207,7 +208,10 @@ class QrAnalyzer(
     private val onQrDetected: (String) -> Unit
 ) : ImageAnalysis.Analyzer {
     private val hints: Map<DecodeHintType, Any> =
-        mapOf(DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE))
+        mapOf(
+            DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE),
+            DecodeHintType.TRY_HARDER to true
+        )
 
     override fun analyze(imageProxy: ImageProxy) {
         try {

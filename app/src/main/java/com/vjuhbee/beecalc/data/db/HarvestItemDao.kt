@@ -21,4 +21,7 @@ interface HarvestItemDao {
 
     @Query("DELETE FROM harvest_items WHERE taskUuid = :taskUuid")
     suspend fun deleteForTask(taskUuid: String)
+
+    @Query("DELETE FROM harvest_items")
+    suspend fun deleteAll()
 }

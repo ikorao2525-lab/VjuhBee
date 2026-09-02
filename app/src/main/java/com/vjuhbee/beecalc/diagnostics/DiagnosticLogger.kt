@@ -47,9 +47,8 @@ class DiagnosticLogger(context: Context) {
     @Synchronized fun clear() { if (file.exists()) file.writeText("") }
 
     private fun write(level: String, event: String) {
-        prune()
         file.appendText("${dateFormat.format(Date())} [$level] ${event.take(240)}\n")
-        prune()
+        if (file.length() > MAX_BYTES) prune()
     }
 
     private fun prune() {

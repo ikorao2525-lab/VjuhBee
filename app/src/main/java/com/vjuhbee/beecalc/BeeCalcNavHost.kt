@@ -30,7 +30,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.size
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -148,11 +147,11 @@ fun BeeCalcNavHost() {
                                         restoreState = true
                                     }
                                 }
-                            },                            icon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(21.dp)) },
+                            },                            icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelRes), modifier = Modifier.size(21.dp)) },
                             label = {
                                 Text(
                                     text = stringResource(tab.labelRes),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, letterSpacing = (-0.6).sp),
+                                    style = MaterialTheme.typography.labelSmall,
                                     maxLines = 1,
                                     softWrap = false
                                 )

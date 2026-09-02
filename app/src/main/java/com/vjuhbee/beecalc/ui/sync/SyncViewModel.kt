@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+import com.vjuhbee.beecalc.data.sync.SyncScope
+
 /** Этап импорт-мастера (SPEC.md §9). */
 sealed interface ImportStep {
     data object Pending : ImportStep          // файл ещё не выбран
@@ -26,6 +28,7 @@ sealed interface ImportStep {
 
 sealed interface SyncMessage {
     data class Error(val text: String) : SyncMessage
+    data class Success(val text: String) : SyncMessage
     data class Exported(val uri: Uri) : SyncMessage
 }
 
@@ -35,16 +38,31 @@ data class SyncUiState(
     val importing: Boolean = false,
     val message: SyncMessage? = null,
     val importedCount: Int = 0,
-    val backups: List<BackupInfo> = emptyList()
+    val backups: List<BackupInfo> = emptyList(),
+    val exportScope: SyncScope = SyncScope.ACTIVE_APIARY,
+    val activeApiaryName: String = ""
 )
 
 class SyncViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val syncRepository = (app as BeeCalcApp).syncRepository
+    private val beeCalcApp = app as BeeCalcApp
+    private val syncRepository = beeCalcApp.syncRepository
+    private val userAndApiaryRepository = beeCalcApp.userAndApiaryRepository
     private val _uiState = MutableStateFlow(SyncUiState())
     val uiState: StateFlow<SyncUiState> = _uiState
 
-    init { refreshBackups() }
+    init {
+        refreshBackups()
+        viewModelScope.launch {
+            userAndApiaryRepository.observeActiveApiary().collect { apiary ->
+                _uiState.value = _uiState.value.copy(activeApiaryName = apiary?.name ?: "Основная пасека")
+            }
+        }
+    }
+
+    fun setExportScope(scope: SyncScope) {
+        _uiState.value = _uiState.value.copy(exportScope = scope)
+    }
 
     fun refreshBackups() {
         _uiState.value = _uiState.value.copy(backups = SyncFileUtils.listBackups(getApplication()))
@@ -58,15 +76,18 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
     private val conflictChoices = mutableMapOf<String, Boolean>()
     var pendingBackup: SyncFileUtils.BackupInfo? = null
         private set
+    var pendingRestore: BackupInfo? = null
+        private set
 
     fun consumeMessage() {
         _uiState.value = _uiState.value.copy(message = null)
     }
 
     fun export() {
+        val currentScope = _uiState.value.exportScope
         _uiState.value = _uiState.value.copy(exporting = true)
         viewModelScope.launch {
-            val sf = syncRepository.export()
+            val sf = syncRepository.export(currentScope)
             val json = SyncSerializer.encode(sf)
             val uri = SyncFileUtils.writeExport(getApplication(), json)
             _uiState.value = _uiState.value.copy(
@@ -81,10 +102,11 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
      * (системный диалог «Сохранить», обычно Downloads) через SAF.
      */
     fun save(uri: Uri) {
+        val currentScope = _uiState.value.exportScope
         _uiState.value = _uiState.value.copy(exporting = true)
         viewModelScope.launch {
             try {
-                val sf = syncRepository.export()
+                val sf = syncRepository.export(currentScope)
                 val json = SyncSerializer.encode(sf)
                 val ok = try {
                     getApplication<Application>().contentResolver.openOutputStream(uri)?.use { out ->
@@ -96,7 +118,7 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
                 if (ok) {
                     _uiState.value = _uiState.value.copy(
                         exporting = false,
-                        message = SyncMessage.Error("Пасека сохранена на устройство.")
+                        message = SyncMessage.Success("Пасека сохранена на устройство.")
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(
@@ -126,10 +148,6 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
             }
             try {
                 val sf = SyncSerializer.decode(text)
-                val backup = SyncSerializer.encode(syncRepository.export())
-                val backupFile = SyncFileUtils.writeBackup(getApplication(), backup)
-                lastImportBackup = SyncFileUtils.BackupInfo(backupFile)
-                refreshBackups()
                 file = sf
                 val p = syncRepository.buildPlan(sf)
                 plan = p
@@ -186,38 +204,59 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         val p = plan ?: return
         _uiState.value = _uiState.value.copy(importing = true)
         viewModelScope.launch {
-            syncRepository.apply(sf, p) { conflict ->
-                conflictChoices[conflict.remote.uuid]
+            try {
+                val backup = SyncSerializer.encode(syncRepository.export(SyncScope.ALL))
+                lastImportBackup = SyncFileUtils.BackupInfo(SyncFileUtils.writeBackup(getApplication(), backup))
+                syncRepository.apply(sf, p) { conflict ->
+                    conflictChoices[conflict.remote.uuid]
+                }
+                refreshBackups()
+                _uiState.value = _uiState.value.copy(
+                    importing = false,
+                    step = ImportStep.Done,
+                    importedCount = p.totalNew + p.totalUpdated
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    importing = false,
+                    message = SyncMessage.Error("Не удалось применить импорт: ${e.message ?: "неизвестная ошибка"}")
+                )
             }
-            _uiState.value = _uiState.value.copy(
-                importing = false,
-                step = ImportStep.Done,
-                importedCount = p.totalNew + p.totalUpdated
-            )
         }
     }
 
-    fun restoreBackup(info: BackupInfo) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(importing = true)
-            try {
-                val text = SyncFileUtils.readBackup(info) ?: error("Не удалось прочитать копию")
-                val sf = SyncSerializer.decode(text)
-                file = sf
-                val p = syncRepository.buildPlan(sf)
-                plan = p
-                conflictIndex = 0
-                conflictChoices.clear()
-                _uiState.value = _uiState.value.copy(importing = false, step = ImportStep.Summary(p), backups = SyncFileUtils.listBackups(getApplication()))
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(importing = false, message = SyncMessage.Error("Копия не прошла проверку: ${e.message}"))
-            }
-        }
+    fun requestRestore(info: BackupInfo) { pendingRestore = info }
+    fun dismissRestore() { pendingRestore = null }
+    fun confirmRestore() {
+        val backup = pendingRestore ?: return
+        pendingRestore = null
+        restoreExactly(backup, "Копия восстановлена.")
     }
 
     fun undoLastImport() {
         val backup = lastImportBackup ?: return
-        restoreBackup(backup)
+        restoreExactly(backup, "Последний импорт отменён.")
+    }
+
+    private fun restoreExactly(info: BackupInfo, successMessage: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(importing = true)
+            try {
+                val text = SyncFileUtils.readBackup(info) ?: error("Не удалось прочитать копию")
+                syncRepository.restoreExactly(SyncSerializer.decode(text))
+                refreshBackups()
+                _uiState.value = _uiState.value.copy(
+                    importing = false,
+                    step = ImportStep.Pending,
+                    message = SyncMessage.Success(successMessage)
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    importing = false,
+                    message = SyncMessage.Error("Не удалось восстановить копию: ${e.message ?: "неизвестная ошибка"}")
+                )
+            }
+        }
     }
 
     fun selectBackup(info: BackupInfo) { pendingBackup = info }
@@ -227,7 +266,7 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val json = SyncFileUtils.readBackup(info) ?: error("Не удалось прочитать копию")
                 getApplication<Application>().contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray(Charsets.UTF_8)) }
-                _uiState.value = _uiState.value.copy(message = SyncMessage.Error("Резервная копия сохранена."))
+                _uiState.value = _uiState.value.copy(message = SyncMessage.Success("Резервная копия сохранена."))
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(message = SyncMessage.Error("Не удалось сохранить копию: ${e.message}"))
             }
@@ -244,6 +283,7 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
     fun reset() {
         file = null
         lastImportBackup = null
+        pendingRestore = null
         plan = null
         conflictIndex = 0
         conflictChoices.clear()

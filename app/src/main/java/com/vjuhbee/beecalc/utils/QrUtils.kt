@@ -201,6 +201,10 @@ fun parseHiveQr(text: String): QrHiveData? {
  */
 fun saveQrToCache(context: Context, bitmap: Bitmap, fileName: String): Uri {
     val dir = File(context.cacheDir, "qr").apply { mkdirs() }
+    dir.listFiles { candidate -> candidate.isFile && candidate.extension == "png" }
+        ?.sortedByDescending { it.lastModified() }
+        ?.drop(9)
+        ?.forEach { it.delete() }
     val file = File(dir, fileName)
     FileOutputStream(file).use { out ->
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
